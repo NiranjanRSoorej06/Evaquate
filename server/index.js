@@ -6,11 +6,105 @@ const path = require('path');
 const multer = require('multer');
 const db = require('./db');
 
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+app.use(cookieParser());
 app.use(express.json());
+
+// --- SESSION MANAGEMENT ---
+const sessions = new Map();
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+const generateSessionId = () => crypto.randomBytes(32).toString('hex');
+
+// Authentication Middleware
+const authenticateToken = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_123');
+    const session = sessions.get(decoded.sessionId);
+    
+    if (!session || session.expiresAt < Date.now()) {
+      if (session) sessions.delete(decoded.sessionId);
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+      return res.status(401).json({ success: false, message: 'Session expired or invalid.' });
+    }
+
+    req.user = session.user;
+    req.sessionId = decoded.sessionId;
+    next();
+  } catch (err) {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    return res.status(401).json({ success: false, message: 'Invalid token.' });
+  }
+};
+
+// Role-based Middleware Guards
+const requireSuperAdmin = (req, res, next) => {
+  if (req.user.role !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden. Super Admin access required.' });
+  }
+  next();
+};
+
+const requireAdmin = (req, res, next) => {
+  const { schoolId } = req.params;
+  if (req.user.role !== 'admin' || (schoolId && req.user.id !== schoolId)) {
+    return res.status(403).json({ success: false, message: 'Forbidden. Admin access required.' });
+  }
+  next();
+};
+
+const requireTeacherOrStudentOfTeacher = (req, res, next) => {
+  const { teacherId } = req.params;
+  if (req.user.role === 'teacher' && req.user.id === teacherId) {
+    return next();
+  }
+  
+  if (req.method === 'GET' && req.user.role === 'student' && req.user.teacher_id === teacherId) {
+    return next();
+  }
+  
+  return res.status(403).json({ success: false, message: 'Forbidden. Unauthorized access.' });
+};
+
+const requireStudent = (req, res, next) => {
+  const { student_id } = req.body;
+  if (req.user.role !== 'student' || (student_id && req.user.id !== student_id)) {
+    return res.status(403).json({ success: false, message: 'Forbidden. Student access required.' });
+  }
+  next();
+};
+
+const requireStudentOfSchool = (req, res, next) => {
+  const { schoolId } = req.params;
+  if (req.user.role !== 'student' || (schoolId && req.user.school_id !== schoolId)) {
+    return res.status(403).json({ success: false, message: 'Forbidden. Unauthorized school map access.' });
+  }
+  next();
+};
+
 
 // Setup Multer for Blueprint Uploads
 const upload = multer({ dest: path.join(__dirname, 'uploads/') });
@@ -19,6 +113,26 @@ if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
 }
 
 // --- API ROUTES ---
+
+// Helper to set session and JWT cookie
+const setSessionAndCookie = (res, userPayload) => {
+  const sessionId = generateSessionId();
+  sessions.set(sessionId, {
+    user: userPayload,
+    expiresAt: Date.now() + SESSION_EXPIRY_MS
+  });
+
+  const token = jwt.sign({ sessionId }, process.env.JWT_SECRET || 'super_secret_jwt_key_123', {
+    expiresIn: '24h'
+  });
+
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: SESSION_EXPIRY_MS
+  });
+};
 
 // 1. Unified Authentication
 app.post('/api/auth/login', async (req, res) => {
@@ -41,19 +155,23 @@ app.post('/api/auth/login', async (req, res) => {
     if (userResult.rowCount > 0) {
       const user = userResult.rows[0];
       if (user.role === 'super_admin') {
-        return res.json({ success: true, user: { id: user.id, username: user.username, role: 'super_admin' } });
+        const userPayload = { id: user.id, username: user.username, role: 'super_admin' };
+        setSessionAndCookie(res, userPayload);
+        return res.json({ success: true, user: userPayload });
       } else if (user.role === 'teacher') {
+        const userPayload = { 
+          id: user.id, 
+          username: user.username, 
+          name: user.name, 
+          role: 'teacher', 
+          school_id: user.school_id, 
+          class_assigned: user.class_assigned,
+          school_name: user.school_name || ''
+        };
+        setSessionAndCookie(res, userPayload);
         return res.json({ 
           success: true, 
-          user: { 
-            id: user.id, 
-            username: user.username, 
-            name: user.name, 
-            role: 'teacher', 
-            school_id: user.school_id, 
-            class_assigned: user.class_assigned,
-            school_name: user.school_name || ''
-          } 
+          user: userPayload
         });
       }
     }
@@ -66,7 +184,9 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (schoolResult.rowCount > 0) {
       const school = schoolResult.rows[0];
-      return res.json({ success: true, user: { id: school.id, name: school.name, unique_code: school.unique_code, role: 'admin' } });
+      const userPayload = { id: school.id, name: school.name, unique_code: school.unique_code, role: 'admin' };
+      setSessionAndCookie(res, userPayload);
+      return res.json({ success: true, user: userPayload });
     }
 
     // 3. Check students table (student)
@@ -81,19 +201,21 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (studentResult.rowCount > 0) {
       const student = studentResult.rows[0];
+      const userPayload = {
+        id: student.id,
+        roll_no: student.roll_no,
+        name: student.name,
+        role: 'student',
+        school_id: student.school_id,
+        school_name: student.school_name || '',
+        teacher_id: student.teacher_id,
+        teacher_name: student.teacher_name || '',
+        class_assigned: student.class_assigned || 'General'
+      };
+      setSessionAndCookie(res, userPayload);
       return res.json({
         success: true,
-        user: {
-          id: student.id,
-          roll_no: student.roll_no,
-          name: student.name,
-          role: 'student',
-          school_id: student.school_id,
-          school_name: student.school_name || '',
-          teacher_id: student.teacher_id,
-          teacher_name: student.teacher_name || '',
-          class_assigned: student.class_assigned || 'General'
-        }
+        user: userPayload
       });
     }
 
@@ -104,8 +226,33 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Session restoration endpoint
+app.get('/api/auth/session', authenticateToken, (req, res) => {
+  res.json({ success: true, user: req.user });
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', (req, res) => {
+  const token = req.cookies.token;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_123');
+      sessions.delete(decoded.sessionId);
+    } catch (err) {
+      // Ignore token verification errors during logout
+    }
+  }
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  });
+  res.json({ success: true });
+});
+
+
 // 2. Super Admin APIs
-app.get('/api/superadmin/schools', async (req, res) => {
+app.get('/api/superadmin/schools', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT s.*, 
@@ -121,7 +268,7 @@ app.get('/api/superadmin/schools', async (req, res) => {
   }
 });
 
-app.post('/api/superadmin/schools', async (req, res) => {
+app.post('/api/superadmin/schools', authenticateToken, requireSuperAdmin, async (req, res) => {
   const { name, unique_code, password } = req.body;
   try {
     // Check if unique_code exists
@@ -144,7 +291,7 @@ app.post('/api/superadmin/schools', async (req, res) => {
 });
 
 // 3. School Admin APIs
-app.get('/api/admin/:schoolId/dashboard', async (req, res) => {
+app.get('/api/admin/:schoolId/dashboard', authenticateToken, requireAdmin, async (req, res) => {
   const { schoolId } = req.params;
   try {
     const schoolRes = await db.query('SELECT name, blueprint_json FROM schools WHERE id = $1', [schoolId]);
@@ -210,7 +357,7 @@ app.get('/api/admin/:schoolId/dashboard', async (req, res) => {
 });
 
 // Create Teacher account
-app.post('/api/admin/:schoolId/teachers', async (req, res) => {
+app.post('/api/admin/:schoolId/teachers', authenticateToken, requireAdmin, async (req, res) => {
   const { schoolId } = req.params;
   const { username, password, name, class_assigned } = req.body;
   try {
@@ -233,7 +380,7 @@ app.post('/api/admin/:schoolId/teachers', async (req, res) => {
 });
 
 // Modify/Assign Teacher Class (or toggle status)
-app.put('/api/admin/:schoolId/teachers/:teacherId', async (req, res) => {
+app.put('/api/admin/:schoolId/teachers/:teacherId', authenticateToken, requireAdmin, async (req, res) => {
   const { teacherId } = req.params;
   const { name, password, class_assigned } = req.body;
   try {
@@ -262,7 +409,7 @@ app.put('/api/admin/:schoolId/teachers/:teacherId', async (req, res) => {
 });
 
 // Delete Teacher account
-app.delete('/api/admin/:schoolId/teachers/:teacherId', async (req, res) => {
+app.delete('/api/admin/:schoolId/teachers/:teacherId', authenticateToken, requireAdmin, async (req, res) => {
   const { teacherId } = req.params;
   try {
     // Delete students assigned to this teacher to clean up orphaned records (matching original db behavior)
@@ -276,7 +423,7 @@ app.delete('/api/admin/:schoolId/teachers/:teacherId', async (req, res) => {
 });
 
 // Blueprint Upload & AI Generation Endpoint
-app.post('/api/admin/:schoolId/blueprint', upload.single('blueprint'), async (req, res) => {
+app.post('/api/admin/:schoolId/blueprint', authenticateToken, requireAdmin, upload.single('blueprint'), async (req, res) => {
   const { schoolId } = req.params;
   try {
     const schoolCheck = await db.query('SELECT 1 FROM schools WHERE id = $1', [schoolId]);
@@ -333,7 +480,7 @@ app.post('/api/admin/:schoolId/blueprint', upload.single('blueprint'), async (re
 });
 
 // Update Blueprint JSON directly (Visual Floorplan Editor modifications)
-app.put('/api/admin/:schoolId/blueprint', async (req, res) => {
+app.put('/api/admin/:schoolId/blueprint', authenticateToken, requireAdmin, async (req, res) => {
   const { schoolId } = req.params;
   const { blueprint_json } = req.body;
   try {
@@ -351,7 +498,7 @@ app.put('/api/admin/:schoolId/blueprint', async (req, res) => {
 });
 
 // 4. Teacher APIs
-app.get('/api/teacher/:teacherId/students', async (req, res) => {
+app.get('/api/teacher/:teacherId/students', authenticateToken, requireTeacherOrStudentOfTeacher, async (req, res) => {
   const { teacherId } = req.params;
   try {
     const studentsRes = await db.query(
@@ -386,7 +533,7 @@ app.get('/api/teacher/:teacherId/students', async (req, res) => {
 });
 
 // Add Single Student
-app.post('/api/teacher/:teacherId/students', async (req, res) => {
+app.post('/api/teacher/:teacherId/students', authenticateToken, requireTeacherOrStudentOfTeacher, async (req, res) => {
   const { teacherId } = req.params;
   const { name, roll_no, school_id } = req.body;
   try {
@@ -414,7 +561,7 @@ app.post('/api/teacher/:teacherId/students', async (req, res) => {
 });
 
 // Bulk Import Students via JSON (CSV parsed on client side)
-app.post('/api/teacher/:teacherId/students/bulk', async (req, res) => {
+app.post('/api/teacher/:teacherId/students/bulk', authenticateToken, requireTeacherOrStudentOfTeacher, async (req, res) => {
   const { teacherId } = req.params;
   const { students, school_id } = req.body; // students array of {name, roll_no}
   try {
@@ -457,7 +604,7 @@ app.post('/api/teacher/:teacherId/students/bulk', async (req, res) => {
 });
 
 // Delete Student
-app.delete('/api/teacher/:teacherId/students/:studentId', async (req, res) => {
+app.delete('/api/teacher/:teacherId/students/:studentId', authenticateToken, requireTeacherOrStudentOfTeacher, async (req, res) => {
   const { studentId } = req.params;
   try {
     // scores will be deleted via ON DELETE CASCADE in db schema
@@ -471,7 +618,7 @@ app.delete('/api/teacher/:teacherId/students/:studentId', async (req, res) => {
 
 // 5. Student & Gameplay APIs
 // Get Quiz
-app.get('/api/quizzes/:disasterType', async (req, res) => {
+app.get('/api/quizzes/:disasterType', authenticateToken, async (req, res) => {
   const { disasterType } = req.params;
   try {
     const quizRes = await db.query('SELECT * FROM quizzes WHERE disaster_type = $1', [disasterType]);
@@ -486,7 +633,7 @@ app.get('/api/quizzes/:disasterType', async (req, res) => {
 });
 
 // Submit Score
-app.post('/api/student/score', async (req, res) => {
+app.post('/api/student/score', authenticateToken, requireStudent, async (req, res) => {
   const { student_id, disaster_type, activity_type, score, duration_seconds } = req.body;
   try {
     const newScoreId = `sc_${Date.now()}`;
@@ -506,7 +653,7 @@ app.post('/api/student/score', async (req, res) => {
 });
 
 // Fetch School Map for Gamification
-app.get('/api/student/:schoolId/map', async (req, res) => {
+app.get('/api/student/:schoolId/map', authenticateToken, requireStudentOfSchool, async (req, res) => {
   const { schoolId } = req.params;
   try {
     const schoolRes = await db.query('SELECT blueprint_json FROM schools WHERE id = $1', [schoolId]);
