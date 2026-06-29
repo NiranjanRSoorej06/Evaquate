@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Flame, ShieldAlert, Waves, Mountain, GraduationCap, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight } from 'lucide-react';
+import { Flame, ShieldAlert, Waves, Mountain, GraduationCap, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight, Menu, X } from 'lucide-react';
 import DrillGame from './DrillGame';
 
 export default function StudentDashboard({ user, onLogout }) {
   const [selectedDisaster, setSelectedDisaster] = useState(null); 
   const [activeTab, setActiveTab] = useState(null); 
   const [sidebarTab, setSidebarTab] = useState('overview'); 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
+  const [isMobile, setIsMobile] = useState(false);
 
   // Quiz states
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [quizCorrectCount, setQuizCorrectCount] = useState(0); // Fixed semantic score mixing
+  const [quizCorrectCount, setQuizCorrectCount] = useState(0); 
   const [finalPercentage, setFinalPercentage] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
@@ -19,7 +21,16 @@ export default function StudentDashboard({ user, onLogout }) {
   // Student scores history
   const [scoreHistory, setScoreHistory] = useState([]);
 
-  // Wrapped in useCallback to prevent recreational triggers
+  // Track screen resize safely
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize(); // Check layout on initial mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchScoreHistory = useCallback(async () => {
     if (!user?.teacher_id || !user?.id) return;
     try {
@@ -36,7 +47,6 @@ export default function StudentDashboard({ user, onLogout }) {
     fetchScoreHistory();
   }, [fetchScoreHistory]);
 
-  // Reset active tab and quiz states when changing disasters
   const handleSelectDisaster = (disasterId) => {
     setSelectedDisaster(disasterId);
     setActiveTab(null);
@@ -109,9 +119,8 @@ export default function StudentDashboard({ user, onLogout }) {
   ];
 
   return (
-    <div style={{ display: 'flex', width: '100%', minHeight: '100vh', backgroundColor: '#f0f9ff', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh', backgroundColor: '#f0f9ff', fontFamily: '"Plus Jakarta Sans", sans-serif', position: 'relative', overflowX: 'hidden' }}>
       
-      {/* Global Dashboard Scoped Styles */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=400;500;600;700&display=swap');
         .sidebar-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 18px; border: none; background: transparent; color: #e0f2fe; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; font-weight: 500; }
@@ -119,32 +128,76 @@ export default function StudentDashboard({ user, onLogout }) {
         .sidebar-active { background: rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-weight: 600; }
         .module-card { background: #fff; border-radius: 20px; padding: 24px; border: 1px solid #e0f2fe; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.03); position: relative; overflow: hidden; }
         .module-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(2, 132, 199, 0.08); border-color: #bae6fd; }
-        .activity-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; border-radius: 16px; border: 1.5px solid #e0f2fe; background: #fff; cursor: pointer; transition: all 0.2s ease; text-align: left; }
+        .activity-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; border-radius: 16px; border: 1.5px solid #e0f2fe; background: #fff; cursor: pointer; transition: all 0.2s ease; text-align: left; width: 100%; box-sizing: border-box; }
         .activity-tab-active { background: #f0f9ff; border-color: #0284c7; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.05); }
         .quiz-option { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; text-align: left; cursor: pointer; transition: all 0.15s; font-size: 14px; font-family: inherit; }
         .quiz-option:hover { border-color: #0284c7; background: #f0f9ff; }
         .quiz-option-selected { background: #0284c7 !important; color: #fff !important; border-color: #0284c7 !important; }
-        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 600px; }
         .data-table th { padding: 16px; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; }
         .data-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; background: #fff; }
         .btn-primary { background: #0284c7; color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .btn-primary:hover { background: #0369a1; transform: scale(1.02); }
       `}</style>
 
-      {/* Sidebar Nav */}
-      <aside style={{ width: '280px', background: '#0284c7', padding: '32px 20px', display: 'flex', flexDirection: 'column', color: '#fff' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 8px' }}>
-          <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
-            <GraduationCap size={24} color="#0284c7" />
+      {/* Top Fixed Mobile Navbar (Shows up ONLY on mobile layout) */}
+      {isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0284c7', color: '#ffffff', padding: '16px 24px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 950, boxShadow: '0 2px 10px rgba(0, 0, 0, 0.12)', height: '60px', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <GraduationCap size={22} color="#ffffff" />
+            <span style={{ fontWeight: '700', fontSize: '16px' }}>Drill Matrix 🚀</span>
           </div>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Drill Matrix 🚀</h2>
+          {/* Here are your clean three lines (hamburger icon) / close button toggle */}
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+          >
+            {isSidebarOpen ? <X size={26} /> : <Menu size={26} />}
+          </button>
+        </div>
+      )}
+
+      {/* Dimmed backdrop background when side nav pulls out on phone screen */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)} 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(2px)', zIndex: 990 }}
+        />
+      )}
+
+      {/* Left Navigation Sidebar */}
+      <aside style={{
+        width: '280px', 
+        background: '#0284c7', 
+        padding: '32px 20px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        color: '#fff',
+        zIndex: 1000,
+        boxSizing: 'border-box',
+        transition: 'transform 0.3s ease',
+        ...(isMobile ? {
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)'
+        } : {})
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '40px', padding: '0 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
+              <GraduationCap size={24} color="#0284c7" />
+            </div>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Drill Matrix 🚀</h2>
+          </div>
         </div>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button onClick={() => { setSidebarTab('overview'); handleSelectDisaster(null); }} className={`sidebar-item ${sidebarTab === 'overview' ? 'sidebar-active' : ''}`}>
+          <button onClick={() => { setSidebarTab('overview'); handleSelectDisaster(null); setIsSidebarOpen(false); }} className={`sidebar-item ${sidebarTab === 'overview' ? 'sidebar-active' : ''}`}>
             <Sliders size={18} /> Training Console 🧭
           </button>
-          <button onClick={() => setSidebarTab('performance')} className={`sidebar-item ${sidebarTab === 'performance' ? 'sidebar-active' : ''}`}>
+          <button onClick={() => { setSidebarTab('performance'); setIsSidebarOpen(false); }} className={`sidebar-item ${sidebarTab === 'performance' ? 'sidebar-active' : ''}`}>
             <Award size={18} /> Performance Logs 🏆
           </button>
         </nav>
@@ -154,10 +207,10 @@ export default function StudentDashboard({ user, onLogout }) {
         </button>
       </aside>
 
-      {/* Main Surface */}
-      <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+      {/* Main Content Pane */}
+      <main className="main-surface" style={{ flex: 1, padding: isMobile ? '20px' : '40px', paddingTop: isMobile ? '84px' : '40px', overflowY: 'auto', boxSizing: 'border-box', width: '100%' }}>
         <header style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
+          <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
             {sidebarTab === 'overview' ? 'Ready for Training? ⭐' : 'Mission History 📖'}
           </h1>
           <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
@@ -168,7 +221,7 @@ export default function StudentDashboard({ user, onLogout }) {
         {sidebarTab === 'overview' ? (
           <>
             {!selectedDisaster ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                 {disasters.map(d => {
                   const Icon = d.icon;
                   return (
@@ -194,13 +247,13 @@ export default function StudentDashboard({ user, onLogout }) {
                   ← Back to Menu 🗺️
                 </button>
 
-                <div style={{ background: '#fff', borderRadius: '24px', padding: '32px', border: '1px solid #e0f2fe' }}>
+                <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', border: '1px solid #e0f2fe' }}>
                   <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', textTransform: 'capitalize', marginBottom: '32px', margin: 0 }}>
                     {selectedDisaster} Preparedness Task ✨
                   </h2>
 
-                  {/* Activity Selector */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
+                  {/* Activity Selector (Becomes single column on phone widths) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
                     {[
                       { id: 'drill', label: 'Evacuation Drill 🎮', icon: Gamepad2, note: 'Practice live escape paths.' },
                       { id: 'video', label: 'Awareness Class 📺', icon: Video, note: 'Watch safety guidelines.' },
@@ -221,14 +274,14 @@ export default function StudentDashboard({ user, onLogout }) {
 
                   {/* Content View */}
                   {activeTab ? (
-                    <div style={{ padding: '24px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #eef2f6' }}>
+                    <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #eef2f6' }}>
                       {activeTab === 'drill' && (
                         <DrillGame schoolId={user?.school_id} disasterType={selectedDisaster} onFinish={(s, t, sc) => submitScore('drill', sc, t)} />
                       )}
 
                       {activeTab === 'video' && (
-                        <div style={{ textAlign: 'center', padding: '40px' }}>
-                          <div style={{ background: '#0f172a', borderRadius: '20px', padding: '60px', color: '#fff' }}>
+                        <div style={{ textAlign: 'center', padding: '12px' }}>
+                          <div style={{ background: '#0f172a', borderRadius: '20px', padding: '40px 16px', color: '#fff' }}>
                             <Video size={48} color="#38bdf8" style={{ marginBottom: '20px' }} />
                             <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '24px', margin: 0 }}>🚨 Essential {selectedDisaster} Protocols 📢</h3>
                             <div style={{ textAlign: 'left', maxWidth: '500px', margin: '24px auto 0 auto', fontSize: '14px', background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', lineHeight: '1.8' }}>
@@ -283,8 +336,8 @@ export default function StudentDashboard({ user, onLogout }) {
             )}
           </>
         ) : (
-          /* Performance Log View */
-          <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e0f2fe', overflow: 'hidden' }}>
+          /* Performance Log View with overflow box fallback */
+          <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e0f2fe', overflowX: 'auto' }}>
             <table className="data-table">
               <thead>
                 <tr>

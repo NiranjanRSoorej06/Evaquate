@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, Edit2, Upload, Compass, Users, UserPlus, Sliders, ShieldCheck } from 'lucide-react';
+import { Trash2, Edit2, Upload, Compass, Users, UserPlus, Sliders, ShieldCheck, Menu, X } from 'lucide-react';
 
 export default function AdminDashboard({ user, onLogout }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Navigation State
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'performance'
+  // Responsive & Navigation States
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   const [tName, setTName] = useState('');
   const [tUsername, setTUsername] = useState('');
@@ -21,6 +23,18 @@ export default function AdminDashboard({ user, onLogout }) {
   
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Handle Viewport Breakpoints dynamically
+  useEffect(() => {
+    const handleResize = () => {
+      const mobileMode = window.innerWidth <= 1024;
+      setIsMobile(mobileMode);
+      if (!mobileMode) setIsSidebarOpen(false); // Clean up state if pulling window back to desktop size
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
@@ -195,15 +209,19 @@ export default function AdminDashboard({ user, onLogout }) {
         .btn-action { background: #0284c7; color: #ffffff; border: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15); }
         .btn-action:hover { background: #0369a1; transform: scale(1.02); box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25); }
         
-        .btn-secondary-link { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 14px; }
+        .btn-secondary-link { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 14px; text-align: center; }
         .btn-secondary-link:hover { background: #e0f2fe; color: #0369a1; border-color: #0284c7; }
         
         .btn-danger-outline { background: transparent; color: #b91c1c; border: 1px solid #fee2e2; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .btn-danger-outline:hover { background: #fef2f2; border-color: #fca5a5; }
         
+        /* Responsive Metrics CSS Grid rules */
         .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
+        @media (max-width: 1200px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .metrics-grid { grid-template-columns: 1fr; gap: 16px; } }
+
         .metric-block { border-left: 5px solid #0284c7; background: #fff; }
-        .metric-num { font-size: 42px; font-weight: 700; color: #0284c7; margin: 6px 0; }
+        .metric-num { font-size: 42px; font-weight: 700; color: #0284c7; margin: 6px 0; display: block; }
         
         .form-control { width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; margin-top: 8px; font-size: 14px; background: #fff; box-sizing: border-box; transition: border 0.2s; font-family: inherit; }
         .form-control:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.1); outline: none; }
@@ -222,18 +240,56 @@ export default function AdminDashboard({ user, onLogout }) {
         .icon-btn:hover { color: #0284c7; border-color: #0284c7; background: #ffffff; }
         .icon-btn-del:hover { color: #b91c1c; border-color: #fca5a5; background: #fef2f2; }
         
+        .table-responsive-scroll { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid #f1f5f9; }
+        table { width: 100%; border-collapse: collapse; min-width: 650px; }
         table th { text-align: left; padding: 16px; color: #475569; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #e2e8f0; background: #f1f5f9; }
         table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; background: #ffffff; }
         table tr:last-child td { border-bottom: none; }
         table tr:hover td { background-color: #f8fafc; }
         
-        .nav-button { background: transparent; border: none; color: #e0f2fe; padding: 12px 16px; border-radius: 10px; font-weight: 500; display: flex; align-items: center; gap: 12px; font-size: 14px; width: 100%', textAlign: 'left', cursor: 'pointer'; transition: all 0.2s; }
+        .nav-button { background: transparent; border: none; color: #e0f2fe; padding: 12px 16px; border-radius: 10px; font-weight: 500; display: flex; align-items: center; gap: 12px; font-size: 14px; width: 100%; text-align: left; cursor: pointer; transition: all 0.2s; }
         .nav-button:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
         .nav-button-active { background: rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-weight: 600; }
       ` }} />
 
-      {/* Sky Blue Sidebar */}
-      <aside style={{ width: '280px', backgroundColor: '#0284c7', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '40px', boxSizing: 'border-box', color: '#fff' }}>
+      {/* Fixed Responsive Mobile Navigation Header Strip */}
+      {isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0284c7', color: '#ffffff', padding: '0 20px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999, height: '60px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.15)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <ShieldCheck size={22} color="#ffffff" />
+            <span style={{ fontWeight: '700', fontSize: '15px', letterSpacing: '-0.2px' }}>Admin Workspace</span>
+          </div>
+          <button type="button" onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '4px' }}>
+            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      )}
+
+      {/* Slide-out Sidebar Overlay Cover Backdrop */}
+      {isMobile && isSidebarOpen && (
+        <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.3)', backdropFilter: 'blur(1px)', zIndex: 1000 }} />
+      )}
+
+      {/* Dynamic Slide Drawer Sidebar Component */}
+      <aside style={{ 
+        width: '280px', 
+        backgroundColor: '#0284c7', 
+        padding: '32px 24px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '40px', 
+        boxSizing: 'border-box', 
+        color: '#fff',
+        transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        zIndex: 1001,
+        ...(isMobile ? {
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)'
+        } : {})
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <ShieldCheck size={22} color="#0284c7" />
@@ -247,17 +303,15 @@ export default function AdminDashboard({ user, onLogout }) {
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
           <button 
             type="button" 
-            onClick={() => setActiveTab('overview')} 
+            onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }} 
             className={`nav-button ${activeTab === 'overview' ? 'nav-button-active' : ''}`}
-            style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
           >
             <Sliders size={18} /> Overview Console
           </button>
           <button 
             type="button" 
-            onClick={() => setActiveTab('performance')} 
+            onClick={() => { setActiveTab('performance'); setIsSidebarOpen(false); }} 
             className={`nav-button ${activeTab === 'performance' ? 'nav-button-active' : ''}`}
-            style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
           >
             <Users size={18} /> Performance Registry
           </button>
@@ -268,15 +322,22 @@ export default function AdminDashboard({ user, onLogout }) {
         </button>
       </aside>
 
-      {/* Main Panel Surface */}
-      <main style={{ flex: 1, padding: '40px', boxSizing: 'border-box', overflowY: 'auto' }}>
+      {/* Main Panel Content Surface */}
+      <main style={{ 
+        flex: 1, 
+        padding: isMobile ? '20px' : '40px', 
+        paddingTop: isMobile ? '84px' : '40px', 
+        boxSizing: 'border-box', 
+        overflowY: 'auto', 
+        width: '100%' 
+      }}>
         
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+            <h1 style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '700', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
               {activeTab === 'overview' ? 'System Infrastructure Overview' : 'Institutional Performance Registers'}
             </h1>
-            <p style={{ color: '#64748b', margin: '4px 0 0 0', fontSize: '15px', fontWeight: '500' }}>Welcome back, Workspace Coordinator</p>
+            <p style={{ color: '#64748b', margin: '6px 0 0 0', fontSize: '15px', fontWeight: '500' }}>Welcome back, Workspace Coordinator</p>
           </div>
         </header>
 
@@ -294,7 +355,7 @@ export default function AdminDashboard({ user, onLogout }) {
         {/* METRICS & OVERVIEW VIEW LAYER */}
         {activeTab === 'overview' && (
           <>
-            {/* Metrics Row */}
+            {/* Responsive Metrics Row */}
             <div className="metrics-grid">
               <div className="panel-card metric-block">
                 <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Total Rooms</span>
@@ -320,11 +381,11 @@ export default function AdminDashboard({ user, onLogout }) {
               </div>
             </div>
 
-            {/* Dynamic Splits */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '32px', alignItems: 'start' }}>
+            {/* Dynamic Panel Layout Split (Adapts columns dynamically on mobile layouts) */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr', gap: '32px', alignItems: 'start' }}>
               
               {/* Spatial Map Component */}
-              <div className="panel-card">
+              <div className="panel-card" style={{ overflow: 'hidden' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Compass size={20} color="#0284c7" /> Blueprint Layout Engine
                 </h3>
@@ -333,16 +394,16 @@ export default function AdminDashboard({ user, onLogout }) {
                 </p>
 
                 {!data?.blueprint_json ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', border: '2px dashed #bae6fd', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', border: '2px dashed #bae6fd', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
                     <Upload size={36} style={{ color: '#38bdf8', marginBottom: '16px' }} />
                     <p style={{ fontSize: '14px', marginBottom: '20px', color: '#475569', fontWeight: '500' }}>
                       Provide blueprint grid asset to deploy layout workspace.
                     </p>
                     <input type="file" accept="image/*" onChange={handleFileUpload} id="blueprint-file" style={{ display: 'none' }} />
-                    <label htmlFor="blueprint-file" className="btn-secondary-link" style={{ cursor: 'pointer' }}>
+                    <label htmlFor="blueprint-file" className="btn-secondary-link" style={{ cursor: 'pointer', padding: '12px 24px' }}>
                       Locate Source File
                     </label>
-                    {file && <button type="button" onClick={startAIScan} className="btn-action" style={{ marginLeft: '12px' }}>Initialize Grid Parser</button>}
+                    {file && <button type="button" onClick={startAIScan} className="btn-action" style={{ marginTop: '16px', width: '100%' }}>Initialize Grid Parser</button>}
                   </div>
                 ) : (
                   <div>
@@ -361,7 +422,7 @@ export default function AdminDashboard({ user, onLogout }) {
                           style={{
                             background: selectedCellType === item.id ? '#0284c7' : '#ffffff',
                             border: `1px solid ${selectedCellType === item.id ? '#0284c7' : '#cbd5e1'}`,
-                            padding: '8px 16px',
+                            padding: '8px 14px',
                             borderRadius: '8px',
                             color: selectedCellType === item.id ? '#ffffff' : '#334155',
                             fontSize: '13px',
@@ -378,23 +439,26 @@ export default function AdminDashboard({ user, onLogout }) {
                       ))}
                     </div>
 
-                    <div className="map-grid-preview" style={{ gridTemplateColumns: `repeat(${data.blueprint_json.width || 1}, 1fr)` }}>
-                      {data.blueprint_json.grid?.map((row, rIdx) => 
-                        row.map((cell, cIdx) => {
-                          let cellClass = 'map-cell-empty';
-                          let displayChar = '';
-                          if (cell === 1) cellClass = 'map-cell-wall';
-                          if (cell === 2) { cellClass = 'map-cell-extinguisher'; displayChar = '🧯'; }
-                          if (cell === 3) { cellClass = 'map-cell-door'; displayChar = '🚪'; }
-                          if (cell === 5) { cellClass = 'map-cell-assembly'; displayChar = '🚩'; }
+                    {/* Matrix scroll frame to support wide multi-grid coordinates on small screens */}
+                    <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch', marginBottom: '16px' }}>
+                      <div className="map-grid-preview" style={{ gridTemplateColumns: `repeat(${data.blueprint_json.width || 1}, minmax(40px, 1fr))`, minWidth: '460px' }}>
+                        {data.blueprint_json.grid?.map((row, rIdx) => 
+                          row.map((cell, cIdx) => {
+                            let cellClass = 'map-cell-empty';
+                            let displayChar = '';
+                            if (cell === 1) cellClass = 'map-cell-wall';
+                            if (cell === 2) { cellClass = 'map-cell-extinguisher'; displayChar = '🧯'; }
+                            if (cell === 3) { cellClass = 'map-cell-door'; displayChar = '🚪'; }
+                            if (cell === 5) { cellClass = 'map-cell-assembly'; displayChar = '🚩'; }
 
-                          return (
-                            <div key={`${rIdx}-${cIdx}`} onClick={() => handleCellClick(rIdx, cIdx)} className={`map-cell ${cellClass}`}>
-                              {displayChar}
-                            </div>
-                          );
-                        })
-                      )}
+                            return (
+                              <div key={`${rIdx}-${cIdx}`} onClick={() => handleCellClick(rIdx, cIdx)} className={`map-cell ${cellClass}`}>
+                                {displayChar}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
 
                     <div style={{ marginTop: '24px' }}>
@@ -411,13 +475,14 @@ export default function AdminDashboard({ user, onLogout }) {
                           }
                         }}
                         className="btn-danger-outline"
+                        style={{ width: isMobile ? '100%' : 'auto' }}
                       >Wipe Configuration Layout</button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* User Enrollment Form */}
+              {/* User Enrollment Onboarding Form */}
               <div className="panel-card">
                 <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <UserPlus size={20} color="#0284c7" /> {isEditingTeacher ? 'Update Instructor Attributes' : 'Staff Profile Onboarding'}
@@ -446,10 +511,10 @@ export default function AdminDashboard({ user, onLogout }) {
                     <input type="text" className="form-control" placeholder="e.g. Room 12-B" value={tClass} onChange={e => setTClass(e.target.value)} required />
                   </div>
 
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <button type="submit" className="btn-action" style={{ flex: 1 }}>{isEditingTeacher ? 'Commit System Updates' : 'Authorize Account Creation'}</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <button type="submit" className="btn-action" style={{ width: '100%' }}>{isEditingTeacher ? 'Commit System Updates' : 'Authorize Account Creation'}</button>
                     {isEditingTeacher && (
-                      <button type="button" onClick={() => { setIsEditingTeacher(null); setTName(''); setTUsername(''); setTClass(''); setTPassword(''); }} className="btn-secondary-link">Abort</button>
+                      <button type="button" onClick={() => { setIsEditingTeacher(null); setTName(''); setTUsername(''); setTClass(''); setTPassword(''); }} className="btn-secondary-link" style={{ width: '100%' }}>Abort</button>
                     )}
                   </div>
                 </form>
@@ -459,9 +524,9 @@ export default function AdminDashboard({ user, onLogout }) {
           </>
         )}
 
-        {/* SEPARATE PERFORMANCE TABS LAYER */}
+        {/* PERFORMANCE TABS SYSTEM ENGINE VIEW */}
         {activeTab === 'performance' && (
-          <div className="panel-card">
+          <div className="panel-card" style={{ padding: isMobile ? '16px' : '28px' }}>
             {!data?.teachers || data.teachers.length === 0 ? (
               <p style={{ color: '#64748b', textAlign: 'center', padding: '32px 0', fontSize: '14px', fontWeight: '500' }}>No profile accounts registered in current database stack.</p>
             ) : (
@@ -473,7 +538,8 @@ export default function AdminDashboard({ user, onLogout }) {
                   return (
                     <div key={teacher.teacher_id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#ffffff' }}>
                       
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                      {/* Responsive Card Headers */}
+                      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '16px', padding: '18px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                         <div>
                           <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>{teacher.teacher_name}</h4>
                           <span style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'inline-block', fontWeight: '500' }}>
@@ -481,20 +547,23 @@ export default function AdminDashboard({ user, onLogout }) {
                           </span>
                         </div>
                         
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
                           {avgEvacTime !== null && (
                             <div style={{ background: '#f0f9ff', padding: '6px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
                               <span style={{ fontSize: '13px', fontWeight: '700', color: '#0369a1' }}>{avgEvacTime}s Average Velocity</span>
                             </div>
                           )}
-                          <button type="button" onClick={() => { handleEditTeacherClick(teacher); setActiveTab('overview'); }} className="icon-btn" aria-label="Modify profile"><Edit2 size={14} /></button>
-                          <button type="button" onClick={() => handleDeleteTeacher(teacher.teacher_id)} className="icon-btn icon-btn-del" aria-label="Drop account"><Trash2 size={14} /></button>
+                          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                            <button type="button" onClick={() => { handleEditTeacherClick(teacher); setActiveTab('overview'); }} className="icon-btn" aria-label="Modify profile"><Edit2 size={14} /></button>
+                            <button type="button" onClick={() => handleDeleteTeacher(teacher.teacher_id)} className="icon-btn icon-btn-del" aria-label="Drop account"><Trash2 size={14} /></button>
+                          </div>
                         </div>
                       </div>
 
+                      {/* Horizontal Responsive Frame Wrapper around data table */}
                       {teacher.students && teacher.students.length > 0 ? (
-                        <div style={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="table-responsive-scroll">
+                          <table>
                             <thead>
                               <tr>
                                 <th>Roll Number</th>
