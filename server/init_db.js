@@ -3,11 +3,11 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const dbUser = process.env.DB_USER || 'postgres';
-const dbPassword = process.env.DB_PASSWORD || 'password';
-const dbHost = process.env.DB_HOST || 'localhost';
-const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
-const dbName = process.env.DB_NAME || 'disaster_prep';
+const dbUser = process.env.DB_USER;
+const dbPassword = process.env.DB_PASSWORD;
+const dbHost = process.env.DB_HOST;
+const dbPort = parseInt(process.env.DB_PORT, 10);
+const dbName = process.env.DB_NAME;
 
 async function init() {
   // 1. Connect to postgres database to ensure target database exists

@@ -4,7 +4,8 @@
   "description": "Backend API for disaster preparation gamified portal",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "init-db": "node init_db.js",
+    "start": "npm run init-db && node index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
