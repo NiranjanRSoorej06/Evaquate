@@ -22,79 +22,81 @@ if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
 
 // 1. Unified Authentication
 app.post('/api/auth/login', async (req, res) => {
-  const { role, username, password, schoolCode } = req.body;
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'Username and password are required.' });
+  }
 
   try {
-    if (role === 'super_admin') {
-      const result = await db.query(
-        'SELECT * FROM users WHERE role = $1 AND username = $2 AND password = $3',
-        ['super_admin', username, password]
-      );
-      if (result.rowCount > 0) {
-        const user = result.rows[0];
+    // 1. Check users table (super_admin and teacher)
+    const userResult = await db.query(
+      `SELECT u.*, s.name as school_name 
+       FROM users u 
+       LEFT JOIN schools s ON u.school_id = s.id 
+       WHERE u.username = $1 AND u.password = $2`,
+      [username, password]
+    );
+
+    if (userResult.rowCount > 0) {
+      const user = userResult.rows[0];
+      if (user.role === 'super_admin') {
         return res.json({ success: true, user: { id: user.id, username: user.username, role: 'super_admin' } });
-      }
-    } else if (role === 'admin') {
-      const result = await db.query(
-        'SELECT * FROM schools WHERE unique_code = $1 AND password = $2',
-        [schoolCode, password]
-      );
-      if (result.rowCount > 0) {
-        const school = result.rows[0];
-        return res.json({ success: true, user: { id: school.id, name: school.name, unique_code: school.unique_code, role: 'admin' } });
-      }
-    } else if (role === 'teacher') {
-      const result = await db.query(
-        `SELECT u.*, s.name as school_name 
-         FROM users u 
-         LEFT JOIN schools s ON u.school_id = s.id 
-         WHERE u.role = 'teacher' AND u.username = $1 AND u.password = $2`,
-        [username, password]
-      );
-      if (result.rowCount > 0) {
-        const teacher = result.rows[0];
+      } else if (user.role === 'teacher') {
         return res.json({ 
           success: true, 
           user: { 
-            id: teacher.id, 
-            username: teacher.username, 
-            name: teacher.name, 
+            id: user.id, 
+            username: user.username, 
+            name: user.name, 
             role: 'teacher', 
-            school_id: teacher.school_id, 
-            class_assigned: teacher.class_assigned,
-            school_name: teacher.school_name || ''
+            school_id: user.school_id, 
+            class_assigned: user.class_assigned,
+            school_name: user.school_name || ''
           } 
         });
       }
-    } else if (role === 'student') {
-      // For students: roll number as username, name as password
-      const result = await db.query(
-        `SELECT st.*, s.name as school_name, u.name as teacher_name, u.class_assigned
-         FROM students st
-         LEFT JOIN schools s ON st.school_id = s.id
-         LEFT JOIN users u ON st.teacher_id = u.id
-         WHERE st.roll_no = $1 AND LOWER(TRIM(st.name)) = LOWER(TRIM($2))`,
-        [username, password.trim()]
-      );
-      if (result.rowCount > 0) {
-        const student = result.rows[0];
-        return res.json({
-          success: true,
-          user: {
-            id: student.id,
-            roll_no: student.roll_no,
-            name: student.name,
-            role: 'student',
-            school_id: student.school_id,
-            school_name: student.school_name || '',
-            teacher_id: student.teacher_id,
-            teacher_name: student.teacher_name || '',
-            class_assigned: student.class_assigned || 'General'
-          }
-        });
-      }
     }
-    
+
+    // 2. Check schools table (admin / school admin)
+    const schoolResult = await db.query(
+      'SELECT * FROM schools WHERE unique_code = $1 AND password = $2',
+      [username, password]
+    );
+
+    if (schoolResult.rowCount > 0) {
+      const school = schoolResult.rows[0];
+      return res.json({ success: true, user: { id: school.id, name: school.name, unique_code: school.unique_code, role: 'admin' } });
+    }
+
+    // 3. Check students table (student)
+    const studentResult = await db.query(
+      `SELECT st.*, s.name as school_name, u.name as teacher_name, u.class_assigned
+       FROM students st
+       LEFT JOIN schools s ON st.school_id = s.id
+       LEFT JOIN users u ON st.teacher_id = u.id
+       WHERE st.roll_no = $1 AND (LOWER(TRIM(st.password)) = LOWER(TRIM($2)) OR LOWER(TRIM(st.name)) = LOWER(TRIM($2)))`,
+      [username, password]
+    );
+
+    if (studentResult.rowCount > 0) {
+      const student = studentResult.rows[0];
+      return res.json({
+        success: true,
+        user: {
+          id: student.id,
+          roll_no: student.roll_no,
+          name: student.name,
+          role: 'student',
+          school_id: student.school_id,
+          school_name: student.school_name || '',
+          teacher_id: student.teacher_id,
+          teacher_name: student.teacher_name || '',
+          class_assigned: student.class_assigned || 'General'
+        }
+      });
+    }
+
     return res.status(401).json({ success: false, message: 'Invalid credentials. Please verify your details.' });
   } catch (err) {
     console.error("Login error", err);
