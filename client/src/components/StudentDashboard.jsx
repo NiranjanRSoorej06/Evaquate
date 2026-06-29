@@ -1,45 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { Flame, ShieldAlert, Waves, Mountain, GraduationCap, Video, CheckSquare, Gamepad2, Timer, Award } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Flame, ShieldAlert, Waves, Mountain, GraduationCap, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight } from 'lucide-react';
 import DrillGame from './DrillGame';
 
 export default function StudentDashboard({ user, onLogout }) {
-  const [selectedDisaster, setSelectedDisaster] = useState(null); // 'fire', 'earthquake', 'flood', 'landslide'
-  const [activeTab, setActiveTab] = useState(null); // 'drill', 'video', 'quiz'
+  const [selectedDisaster, setSelectedDisaster] = useState(null); 
+  const [activeTab, setActiveTab] = useState(null); 
+  const [sidebarTab, setSidebarTab] = useState('overview'); 
 
   // Quiz states
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [quizScore, setQuizScore] = useState(0);
+  const [quizCorrectCount, setQuizCorrectCount] = useState(0); // Fixed semantic score mixing
+  const [finalPercentage, setFinalPercentage] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
 
   // Student scores history
   const [scoreHistory, setScoreHistory] = useState([]);
 
-  const fetchScoreHistory = async () => {
+  // Wrapped in useCallback to prevent recreational triggers
+  const fetchScoreHistory = useCallback(async () => {
+    if (!user?.teacher_id || !user?.id) return;
     try {
       const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`);
       const data = await response.json();
-      const me = data.students.find(s => s.id === user.id);
-      if (me) {
-        setScoreHistory(me.scores || []);
-      }
+      const me = data.students?.find(s => s.id === user.id);
+      if (me) setScoreHistory(me.scores || []);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [user?.teacher_id, user?.id]);
 
   useEffect(() => {
     fetchScoreHistory();
-  }, [selectedDisaster, activeTab]);
+  }, [fetchScoreHistory]);
+
+  // Reset active tab and quiz states when changing disasters
+  const handleSelectDisaster = (disasterId) => {
+    setSelectedDisaster(disasterId);
+    setActiveTab(null);
+    setQuizFinished(false);
+    setQuizQuestions([]);
+  };
 
   const loadQuiz = async (type) => {
+    if (!type) return;
     setQuizLoading(true);
     setQuizFinished(false);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
-    setQuizScore(0);
+    setQuizCorrectCount(0);
+    setFinalPercentage(0);
     try {
       const response = await fetch(`http://localhost:3001/api/quizzes/${type}`);
       const data = await response.json();
@@ -51,29 +63,26 @@ export default function StudentDashboard({ user, onLogout }) {
     }
   };
 
-  const handleAnswerSelect = (index) => {
-    setSelectedAnswer(index);
-  };
+  const handleAnswerSelect = (index) => setSelectedAnswer(index);
 
   const handleNextQuestion = () => {
     const isCorrect = selectedAnswer === quizQuestions[currentQuestionIndex].answer;
-    let newScore = quizScore;
-    if (isCorrect) newScore += 1;
+    const nextCorrectCount = quizCorrectCount + (isCorrect ? 1 : 0);
 
     if (currentQuestionIndex + 1 < quizQuestions.length) {
-      setQuizScore(newScore);
+      setQuizCorrectCount(nextCorrectCount);
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
     } else {
-      // Finished
-      const finalPercentage = Math.round((newScore / quizQuestions.length) * 100);
-      setQuizScore(finalPercentage);
+      const percentage = Math.round((nextCorrectCount / quizQuestions.length) * 100);
+      setFinalPercentage(percentage);
       setQuizFinished(true);
-      submitScore('quiz', finalPercentage, 30); // 30s estimated quiz duration
+      submitScore('quiz', percentage, 30);
     }
   };
 
   const submitScore = async (activityType, score, durationSeconds) => {
+    if (!user?.id || !selectedDisaster) return;
     try {
       await fetch('http://localhost:3001/api/student/score', {
         method: 'POST',
@@ -88,282 +97,223 @@ export default function StudentDashboard({ user, onLogout }) {
       });
       fetchScoreHistory();
     } catch (err) {
-      console.error("Failed to post score to DB", err);
+      console.error("Failed to post score", err);
     }
   };
 
-  const handleDrillFinish = (success, timeTaken, score) => {
-    submitScore('drill', score, timeTaken);
-  };
-
   const disasters = [
-    { id: 'fire', label: 'Fire Safety', icon: Flame, color: 'var(--color-fire)', desc: 'Escape classroom fire breakouts and handle extinguishers' },
-    { id: 'earthquake', label: 'Earthquake Drill', icon: ShieldAlert, color: 'var(--color-earthquake)', desc: 'Learn drop, cover, and hold procedures' },
-    { id: 'flood', label: 'Flood Survival', icon: Waves, color: 'var(--color-flood)', desc: 'Find high ground and safety points during sudden floods' },
-    { id: 'landslide', label: 'Landslide Safety', icon: Mountain, color: 'var(--color-landslide)', desc: 'Evacuate dangerous slide zones and seek shelter' }
+    { id: 'fire', label: 'Fire Safety', emoji: '🔥', icon: Flame, color: '#ef4444', desc: 'Master fire escapes and extinguisher PASS techniques.' },
+    { id: 'earthquake', label: 'Earthquake Drill', emoji: '🧱', icon: ShieldAlert, color: '#f97316', desc: 'Learn drop, cover, and hold procedures on campus.' },
+    { id: 'flood', label: 'Flood Survival', emoji: '🌊', icon: Waves, color: '#0ea5e9', desc: 'Find high ground and safety points during floods.' },
+    { id: 'landslide', label: 'Landslide Safety', emoji: '🧗', icon: Mountain, color: '#8b5cf6', desc: 'Evacuate slide zones and follow shelter paths.' }
   ];
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-      <header style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <GraduationCap size={32} color="var(--color-accent-primary)" />
-            Student Disaster Drills Center
-          </h1>
-          <p style={{ color: 'var(--color-text-secondary)' }}>
-            Student: <strong>{user.name}</strong> | Roll No: {user.roll_no} | Class: {user.class_assigned} | Teacher: {user.teacher_name}
-          </p>
+    <div style={{ display: 'flex', width: '100%', minHeight: '100vh', backgroundColor: '#f0f9ff', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+      
+      {/* Global Dashboard Scoped Styles */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=400;500;600;700&display=swap');
+        .sidebar-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 18px; border: none; background: transparent; color: #e0f2fe; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; font-weight: 500; }
+        .sidebar-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+        .sidebar-active { background: rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-weight: 600; }
+        .module-card { background: #fff; border-radius: 20px; padding: 24px; border: 1px solid #e0f2fe; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.03); position: relative; overflow: hidden; }
+        .module-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(2, 132, 199, 0.08); border-color: #bae6fd; }
+        .activity-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; border-radius: 16px; border: 1.5px solid #e0f2fe; background: #fff; cursor: pointer; transition: all 0.2s ease; text-align: left; }
+        .activity-tab-active { background: #f0f9ff; border-color: #0284c7; box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.05); }
+        .quiz-option { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; text-align: left; cursor: pointer; transition: all 0.15s; font-size: 14px; font-family: inherit; }
+        .quiz-option:hover { border-color: #0284c7; background: #f0f9ff; }
+        .quiz-option-selected { background: #0284c7 !important; color: #fff !important; border-color: #0284c7 !important; }
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .data-table th { padding: 16px; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; }
+        .data-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; background: #fff; }
+        .btn-primary { background: #0284c7; color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background: #0369a1; transform: scale(1.02); }
+      `}</style>
+
+      {/* Sidebar Nav */}
+      <aside style={{ width: '280px', background: '#0284c7', padding: '32px 20px', display: 'flex', flexDirection: 'column', color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 8px' }}>
+          <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
+            <GraduationCap size={24} color="#0284c7" />
+          </div>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Drill Matrix 🚀</h2>
         </div>
-        <button onClick={onLogout} className="btn-secondary">Logout</button>
-      </header>
 
-      {!selectedDisaster ? (
-        <>
-          {/* Disaster Grid */}
-          <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Choose a Disaster Training Module</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-            {disasters.map(d => {
-              const Icon = d.icon;
-              return (
-                <div
-                  key={d.id}
-                  onClick={() => {
-                    setSelectedDisaster(d.id);
-                    setActiveTab(null);
-                  }}
-                  className="glass-panel glass-panel-hover"
-                  style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '16px' }}
-                >
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: `${d.color}15`, display: 'flex', alignItems: 'center', justifySelf: 'start', justifyContent: 'center', border: `1px solid ${d.color}30` }}>
-                    <Icon size={24} color={d.color} />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '18px', marginBottom: '6px' }}>{d.label}</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{d.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Drill Performance Summary */}
-          <div className="glass-panel">
-            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>My Safety Badges & Drill Logs</h2>
-            {scoreHistory.length === 0 ? (
-              <p style={{ fontStyle: 'italic', color: 'var(--color-text-muted)', textAlign: 'center', padding: '20px' }}>
-                You haven't participated in any safety drills or quizzes yet. Select a disaster module above to start!
-              </p>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                    <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)' }}>Activity</th>
-                    <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)' }}>Disaster</th>
-                    <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)' }}>Safety Score</th>
-                    <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)' }}>Duration</th>
-                    <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)' }}>Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scoreHistory.map(sc => (
-                    <tr key={sc.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                      <td style={{ padding: '16px 8px', fontWeight: 'bold' }}>{sc.activity_type.toUpperCase()}</td>
-                      <td style={{ padding: '16px 8px', textTransform: 'capitalize' }}>{sc.disaster_type}</td>
-                      <td style={{ padding: '16px 8px', color: sc.score >= 80 ? 'var(--color-safe)' : 'var(--color-earthquake)' }}>
-                        {sc.score} {sc.activity_type === 'quiz' ? '%' : 'pts'}
-                      </td>
-                      <td style={{ padding: '16px 8px' }}>{sc.duration_seconds}s</td>
-                      <td style={{ padding: '16px 8px', color: 'var(--color-text-muted)' }}>{new Date(sc.timestamp).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </>
-      ) : (
-        <div>
-          {/* Back button */}
-          <button onClick={() => setSelectedDisaster(null)} className="btn-secondary" style={{ marginBottom: '24px' }}>
-            ← Back to Disasters
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button onClick={() => { setSidebarTab('overview'); handleSelectDisaster(null); }} className={`sidebar-item ${sidebarTab === 'overview' ? 'sidebar-active' : ''}`}>
+            <Sliders size={18} /> Training Console 🧭
           </button>
+          <button onClick={() => setSidebarTab('performance')} className={`sidebar-item ${sidebarTab === 'performance' ? 'sidebar-active' : ''}`}>
+            <Award size={18} /> Performance Logs 🏆
+          </button>
+        </nav>
 
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '30px' }}>
-            <h2 style={{ fontSize: '24px', textTransform: 'capitalize' }}>{selectedDisaster} Preparedness Training</h2>
-          </div>
+        <button onClick={onLogout} className="sidebar-item" style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)' }}>
+          <LogOut size={18} /> Sign Out 🚪
+        </button>
+      </aside>
 
-          {/* Activity selectors */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '30px' }}>
-            {[
-              { id: 'drill', label: '1. Start Evacuation Drill', icon: Gamepad2, desc: 'Interactive floorplan escape game' },
-              { id: 'video', label: '2. Awareness Class', icon: Video, desc: 'Watch safety guidelines and tips' },
-              { id: 'quiz', label: '3. Challenge Quiz', icon: CheckSquare, desc: 'Test your emergency response safety knowledge' }
-            ].map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    if (tab.id === 'quiz') {
-                      loadQuiz(selectedDisaster);
-                    }
-                  }}
-                  style={{
-                    background: activeTab === tab.id ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${activeTab === tab.id ? 'var(--color-accent-primary)' : 'var(--glass-border)'}`,
-                    borderRadius: '12px',
-                    padding: '20px',
-                    color: '#fff',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'var(--transition-smooth)'
-                  }}
-                >
-                  <Icon size={24} style={{ color: activeTab === tab.id ? 'var(--color-accent-primary)' : 'var(--color-text-muted)', marginBottom: '10px' }} />
-                  <div style={{ fontWeight: '700', fontSize: '15px', marginBottom: '4px' }}>{tab.label}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{tab.desc}</div>
+      {/* Main Surface */}
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+        <header style={{ marginBottom: '32px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
+            {sidebarTab === 'overview' ? 'Ready for Training? ⭐' : 'Mission History 📖'}
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
+            🎒 Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | 🏫 Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
+          </p>
+        </header>
+
+        {sidebarTab === 'overview' ? (
+          <>
+            {!selectedDisaster ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+                {disasters.map(d => {
+                  const Icon = d.icon;
+                  return (
+                    <div key={d.id} className="module-card" onClick={() => handleSelectDisaster(d.id)}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ background: `${d.color}10`, width: '50px', height: '50px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                          <Icon size={24} color={d.color} />
+                        </div>
+                        <span style={{ fontSize: '24px' }}>{d.emoji}</span>
+                      </div>
+                      <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>{d.label}</h3>
+                      <p style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6', marginBottom: '20px', marginTop: '8px' }}>{d.desc}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', color: '#0284c7', fontSize: '13px', fontWeight: '600' }}>
+                        Let's Go! <ChevronRight size={16} style={{ marginLeft: '4px' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div>
+                <button onClick={() => handleSelectDisaster(null)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  ← Back to Menu 🗺️
                 </button>
-              );
-            })}
-          </div>
 
-          {/* Interactive Screen container */}
-          {activeTab && (
-            <div className="glass-panel" style={{ minHeight: '400px' }}>
-              {activeTab === 'drill' && (
-                <DrillGame
-                  schoolId={user.school_id}
-                  disasterType={selectedDisaster}
-                  onFinish={handleDrillFinish}
-                />
-              )}
+                <div style={{ background: '#fff', borderRadius: '24px', padding: '32px', border: '1px solid #e0f2fe' }}>
+                  <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', textTransform: 'capitalize', marginBottom: '32px', margin: 0 }}>
+                    {selectedDisaster} Preparedness Task ✨
+                  </h2>
 
-              {activeTab === 'video' && (
-                <div>
-                  <h3 style={{ fontSize: '20px', marginBottom: '16px' }}>Safety Awareness Animation</h3>
-                  
-                  {/* Dynamic Mock Video player with Educational Slides */}
-                  <div style={{ width: '100%', maxWidth: '800px', margin: '0 auto', background: '#000', borderRadius: '12px', border: '1px solid var(--glass-border)', overflow: 'hidden' }}>
-                    <div style={{ padding: '40px', textAlign: 'center', background: 'linear-gradient(135deg, #131b2e 0%, #070a13 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '380px' }}>
-                      <Video size={48} style={{ color: 'var(--color-accent-primary)', marginBottom: '16px' }} />
-                      <h4 style={{ fontSize: '22px', marginBottom: '8px' }}>
-                        {selectedDisaster.toUpperCase()} EVACUATION TIPS
-                      </h4>
-                      
-                      <div style={{ maxWidth: '550px', background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', margin: '20px 0', textAlign: 'left', fontSize: '14px' }}>
-                        <h5 style={{ fontWeight: 'bold', marginBottom: '10px', color: 'var(--color-earthquake)' }}>Key Survival Points:</h5>
-                        {selectedDisaster === 'fire' && (
-                          <ul style={{ paddingLeft: '18px', lineHeight: '1.6' }}>
-                            <li>Stay low and crawl under smoke to breathe clean air.</li>
-                            <li>Touch closed doors with the back of your hand; if hot, find another exit.</li>
-                            <li>Use fire extinguishers using the PASS technique: Pull, Aim, Squeeze, Sweep.</li>
-                          </ul>
-                        )}
-                        {selectedDisaster === 'earthquake' && (
-                          <ul style={{ paddingLeft: '18px', lineHeight: '1.6' }}>
-                            <li>Drop to the floor, take cover under a sturdy desk, and hold on tight.</li>
-                            <li>Stay away from glass windows, heavy bookcases, and outer walls.</li>
-                            <li>Evacuate only once shaking stops completely. Do not use elevators.</li>
-                          </ul>
-                        )}
-                        {selectedDisaster === 'flood' && (
-                          <ul style={{ paddingLeft: '18px', lineHeight: '1.6' }}>
-                            <li>Immediately move to higher levels like the upper floors or roof.</li>
-                            <li>Do not walk or step in moving water. Six inches of water can knock you down.</li>
-                            <li>Avoid touching any electrical equipment that has gotten wet.</li>
-                          </ul>
-                        )}
-                        {selectedDisaster === 'landslide' && (
-                          <ul style={{ paddingLeft: '18px', lineHeight: '1.6' }}>
-                            <li>Move away from landslide paths or slopes as fast as possible.</li>
-                            <li>If inside and unable to escape, curl into a ball and cover your head under cover.</li>
-                            <li>Listen for unusual rumbling sounds or crackling trees.</li>
-                          </ul>
-                        )}
-                      </div>
-
-                      <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                        Play the evacuation drill next to practice these safety points on your school map!
-                      </p>
-                    </div>
+                  {/* Activity Selector */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
+                    {[
+                      { id: 'drill', label: 'Evacuation Drill 🎮', icon: Gamepad2, note: 'Practice live escape paths.' },
+                      { id: 'video', label: 'Awareness Class 📺', icon: Video, note: 'Watch safety guidelines.' },
+                      { id: 'quiz', label: 'Knowledge Quiz 📝', icon: CheckSquare, note: 'Test your survival skills.' }
+                    ].map(t => {
+                      const Icon = t.icon;
+                      return (
+                        <button key={t.id} onClick={() => { setActiveTab(t.id); if(t.id === 'quiz') loadQuiz(selectedDisaster); }} className={`activity-tab ${activeTab === t.id ? 'activity-tab-active' : ''}`}>
+                          <Icon size={22} color={activeTab === t.id ? '#0284c7' : '#94a3b8'} />
+                          <div style={{ marginTop: '8px' }}>
+                            <div style={{ fontWeight: '700', fontSize: '14px', color: activeTab === t.id ? '#0284c7' : '#1e293b' }}>{t.label}</div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{t.note}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
 
-              {activeTab === 'quiz' && (
-                <div>
-                  <h3 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Timer size={20} color="var(--color-earthquake)" />
-                    Emergency Challenge: {selectedDisaster.toUpperCase()} QUIZ
-                  </h3>
+                  {/* Content View */}
+                  {activeTab ? (
+                    <div style={{ padding: '24px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #eef2f6' }}>
+                      {activeTab === 'drill' && (
+                        <DrillGame schoolId={user?.school_id} disasterType={selectedDisaster} onFinish={(s, t, sc) => submitScore('drill', sc, t)} />
+                      )}
 
-                  {quizLoading ? (
-                    <p>Loading quiz questions...</p>
-                  ) : quizFinished ? (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
-                      <Award size={48} style={{ color: 'var(--color-safe)', marginBottom: '16px' }} />
-                      <h4 style={{ fontSize: '24px', marginBottom: '8px' }}>Challenge Complete!</h4>
-                      <p style={{ fontSize: '18px', marginBottom: '20px' }}>
-                        Your Score: <strong style={{ color: 'var(--color-safe)' }}>{quizScore}%</strong>
-                      </p>
-                      <button
-                        onClick={() => loadQuiz(selectedDisaster)}
-                        className="btn-primary"
-                      >
-                        Retake Quiz
-                      </button>
-                    </div>
-                  ) : quizQuestions.length > 0 ? (
-                    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                      <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                        Question {currentQuestionIndex + 1} of {quizQuestions.length}
-                      </span>
-                      <h4 style={{ fontSize: '18px', margin: '12px 0 24px 0' }}>
-                        {quizQuestions[currentQuestionIndex].question}
-                      </h4>
+                      {activeTab === 'video' && (
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                          <div style={{ background: '#0f172a', borderRadius: '20px', padding: '60px', color: '#fff' }}>
+                            <Video size={48} color="#38bdf8" style={{ marginBottom: '20px' }} />
+                            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '24px', margin: 0 }}>🚨 Essential {selectedDisaster} Protocols 📢</h3>
+                            <div style={{ textAlign: 'left', maxWidth: '500px', margin: '24px auto 0 auto', fontSize: '14px', background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', lineHeight: '1.8' }}>
+                              {selectedDisaster === 'fire' ? (
+                                <>
+                                  🏃 <b>Crawl low under smoke</b> to stay safe!<br/>
+                                  🤚 Use the <b>back of your hand</b> to check doors.<br/>
+                                  🧯 Remember <b>PASS</b> when using extinguishers.
+                                </>
+                              ) : (
+                                <>
+                                  🛑 <b>Drop, Cover, and Hold On!</b><br/>
+                                  🪟 Stay far away from windows and glass.<br/>
+                                  🚪 <b>Don't use elevators</b>—always use stairs.
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '30px' }}>
-                        {quizQuestions[currentQuestionIndex].options.map((option, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleAnswerSelect(idx)}
-                            style={{
-                              textAlign: 'left',
-                              padding: '16px',
-                              borderRadius: '8px',
-                              background: selectedAnswer === idx ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.02)',
-                              border: `1px solid ${selectedAnswer === idx ? 'var(--color-accent-primary)' : 'var(--glass-border)'}`,
-                              color: '#fff',
-                              cursor: 'pointer',
-                              fontSize: '14px',
-                              transition: 'var(--transition-fast)'
-                            }}
-                          >
-                            {option}
-                          </button>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={handleNextQuestion}
-                        disabled={selectedAnswer === null}
-                        className="btn-primary"
-                        style={{ width: '100%', justifyContent: 'center' }}
-                      >
-                        {currentQuestionIndex + 1 === quizQuestions.length ? 'Finish Quiz' : 'Next Question'}
-                      </button>
+                      {activeTab === 'quiz' && (
+                        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                          {quizLoading ? <p>Loading quiz questions... ⏳</p> : quizFinished ? (
+                            <div style={{ textAlign: 'center' }}>
+                              <Award size={64} color="#0284c7" style={{ marginBottom: '16px' }} />
+                              <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Awesome Job! 🎉</h2>
+                              <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0284c7', margin: '0 0 20px 0' }}>Your Score: {finalPercentage}%</h3>
+                              <button onClick={() => loadQuiz(selectedDisaster)} className="btn-primary">Try Again 🔄</button>
+                            </div>
+                          ) : quizQuestions.length > 0 ? (
+                            <>
+                              <h4 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#1e293b', margin: '0 0 24px 0' }}>🤔 {quizQuestions[currentQuestionIndex]?.question}</h4>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+                                {quizQuestions[currentQuestionIndex]?.options?.map((opt, i) => (
+                                  <button key={i} onClick={() => handleAnswerSelect(i)} className={`quiz-option ${selectedAnswer === i ? 'quiz-option-selected' : ''}`}>{opt}</button>
+                                ))}
+                              </div>
+                              <button disabled={selectedAnswer === null} onClick={handleNextQuestion} className="btn-primary" style={{ width: '100%' }}>Next Question ➡️</button>
+                            </>
+                          ) : (
+                            <p style={{ textAlign: 'center', color: '#64748b' }}>No questions available for this module yet. 📋</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <p>No questions found for this disaster.</p>
+                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>👇 Select an activity above to start your safety training! 🎯</div>
                   )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            )}
+          </>
+        ) : (
+          /* Performance Log View */
+          <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #e0f2fe', overflow: 'hidden' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Modality 🎯</th>
+                  <th>Module 🧭</th>
+                  <th>Success Rate ⭐</th>
+                  <th>Duration ⏱️</th>
+                  <th>Logged On 📅</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scoreHistory.length > 0 ? scoreHistory.map(sc => (
+                  <tr key={sc.id}>
+                    <td style={{ fontWeight: '700' }}>{sc.activity_type?.toUpperCase()}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{sc.disaster_type}</td>
+                    <td style={{ fontWeight: '700', color: sc.score >= 80 ? '#10b981' : '#f59e0b' }}>
+                      {sc.score}{sc.activity_type === 'quiz' ? '%' : ' pts'} {sc.score >= 80 ? '🥇' : '🥈'}
+                    </td>
+                    <td>{sc.duration_seconds}s</td>
+                    <td style={{ color: '#64748b' }}>{new Date(sc.timestamp).toLocaleDateString()}</td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No session logs found yet. Start training to collect trophies! 🏆</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

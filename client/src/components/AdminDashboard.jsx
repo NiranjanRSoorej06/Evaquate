@@ -1,27 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Upload, AlertCircle, Compass, CheckCircle, Send, Users, UserPlus } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Trash2, Edit2, Upload, Compass, Users, UserPlus, Sliders, ShieldCheck } from 'lucide-react';
 
 export default function AdminDashboard({ user, onLogout }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Teacher form state
+  // Navigation State
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'performance'
+  
   const [tName, setTName] = useState('');
   const [tUsername, setTUsername] = useState('');
   const [tPassword, setTPassword] = useState('');
   const [tClass, setTClass] = useState('');
   const [isEditingTeacher, setIsEditingTeacher] = useState(null);
   
-  // Blueprint upload simulation states
   const [file, setFile] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
-  const [selectedCellType, setSelectedCellType] = useState('wall'); // wall, extinguisher, door, empty, assembly
+  const [selectedCellType, setSelectedCellType] = useState('wall'); 
   
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    if (!user?.id) return;
     try {
       const response = await fetch(`http://localhost:3001/api/admin/${user.id}/dashboard`);
       const resData = await response.json();
@@ -31,11 +33,11 @@ export default function AdminDashboard({ user, onLogout }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
   const handleCreateTeacher = async (e) => {
     e.preventDefault();
@@ -44,16 +46,14 @@ export default function AdminDashboard({ user, onLogout }) {
     try {
       let response, resData;
       if (isEditingTeacher) {
-        // Edit existing teacher class assignment
-        response = await fetch(`http://localhost:3001/api/admin/${user.id}/teachers/${isEditingTeacher}`, {
+        response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${isEditingTeacher}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass })
         });
         resData = await response.json();
       } else {
-        // Create new teacher
-        response = await fetch(`http://localhost:3001/api/admin/${user.id}/teachers`, {
+        response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: tName, username: tUsername, password: tPassword, class_assigned: tClass })
@@ -62,11 +62,8 @@ export default function AdminDashboard({ user, onLogout }) {
       }
 
       if (resData.success) {
-        setSuccessMsg(isEditingTeacher ? 'Teacher updated!' : 'Teacher account created successfully!');
-        setTName('');
-        setTUsername('');
-        setTPassword('');
-        setTClass('');
+        setSuccessMsg(isEditingTeacher ? 'Teacher updated successfully.' : 'Teacher account created successfully.');
+        setTName(''); setTUsername(''); setTPassword(''); setTClass('');
         setIsEditingTeacher(null);
         fetchDashboardData();
       } else {
@@ -81,14 +78,14 @@ export default function AdminDashboard({ user, onLogout }) {
     setIsEditingTeacher(teacher.teacher_id);
     setTName(teacher.teacher_name);
     setTUsername(teacher.teacher_username);
-    setTPassword(''); // leave empty to not change
+    setTPassword(''); 
     setTClass(teacher.class_assigned);
   };
 
   const handleDeleteTeacher = async (teacherId) => {
-    if (!window.confirm("Are you sure you want to delete this teacher? All their student records will be orphaned or deleted.")) return;
+    if (!window.confirm("Are you sure you want to delete this teacher?")) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/${user.id}/teachers/${teacherId}`, {
+      const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${teacherId}`, {
         method: 'DELETE'
       });
       const resData = await response.json();
@@ -101,16 +98,38 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   };
 
-  // Blueprint AI Parser simulation
   const handleFileUpload = (e) => {
-    setFile(e.target.files[0]);
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
   };
+
+  const finalizeScan = useCallback(async () => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('blueprint', file);
+      const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+        method: 'POST',
+        body: formData
+      });
+      const resData = await response.json();
+      if (resData.success) {
+        setIsScanning(false);
+        setFile(null);
+        setSuccessMsg('AI Floorplan scanning complete.');
+        fetchDashboardData();
+      }
+    } catch (err) {
+      setIsScanning(false);
+      setErrorMsg('Scan uploaded but mapping failed.');
+    }
+  }, [file, user?.id, fetchDashboardData]);
 
   const startAIScan = () => {
     if (!file) return;
     setIsScanning(true);
     setScanProgress(0);
-    
     const interval = setInterval(() => {
       setScanProgress(prev => {
         if (prev >= 100) {
@@ -123,37 +142,9 @@ export default function AdminDashboard({ user, onLogout }) {
     }, 300);
   };
 
-  const finalizeScan = async () => {
-    try {
-      const formData = new FormData();
-      formData.append('blueprint', file);
-
-      const response = await fetch(`http://localhost:3001/api/admin/${user.id}/blueprint`, {
-        method: 'POST',
-        body: formData
-      });
-      const resData = await response.json();
-      if (resData.success) {
-        setIsScanning(false);
-        setFile(null);
-        setSuccessMsg('AI Floorplan scanning complete! School Map generated for gamification.');
-        fetchDashboardData();
-      }
-    } catch (err) {
-      setIsScanning(false);
-      setErrorMsg('Scan uploaded but JSON mapping failed.');
-    }
-  };
-
-  // Grid editing functions
   const handleCellClick = async (rIndex, cIndex) => {
-    if (!data.blueprint_json) return;
-    
-    // Copy the blueprint grid
+    if (!data?.blueprint_json) return;
     const updatedBlueprint = JSON.parse(JSON.stringify(data.blueprint_json));
-    
-    // Toggle/Set values
-    // Grid values: 0: empty, 1: wall, 2: extinguisher, 3: door, 4: secondary hazard, 5: assembly yard
     let val = 0;
     if (selectedCellType === 'wall') val = 1;
     else if (selectedCellType === 'extinguisher') val = 2;
@@ -161,11 +152,9 @@ export default function AdminDashboard({ user, onLogout }) {
     else if (selectedCellType === 'assembly') val = 5;
 
     updatedBlueprint.grid[rIndex][cIndex] = val;
-
-    // Update dynamic listings (extinguishers, doors, etc.)
     const extinguishers = [];
     const doors = [];
-    let assembly_zone = updatedBlueprint.elements.assembly_zone;
+    let assembly_zone = updatedBlueprint.elements?.assembly_zone;
 
     updatedBlueprint.grid.forEach((row, r) => {
       row.forEach((cell, c) => {
@@ -175,403 +164,383 @@ export default function AdminDashboard({ user, onLogout }) {
       });
     });
 
+    updatedBlueprint.elements = updatedBlueprint.elements || {};
     updatedBlueprint.elements.extinguishers = extinguishers;
     updatedBlueprint.elements.doors = doors;
     updatedBlueprint.elements.assembly_zone = assembly_zone;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/${user.id}/blueprint`, {
+      await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blueprint_json: updatedBlueprint })
       });
-      const resData = await response.json();
-      if (resData.success) {
-        setData(prev => ({ ...prev, blueprint_json: updatedBlueprint }));
-      }
+      setData(prev => ({ ...prev, blueprint_json: updatedBlueprint }));
     } catch (err) {
       console.error("Error saving updated grid", err);
     }
   };
 
-  const handleContactSuperAdmin = () => {
-    alert("Support request submitted to Super Admin. Our engineers will verify your school coordinates shortly.");
-  };
-
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading dashboard data...</div>;
+  if (loading || !data) return <div style={{ padding: '60px', textAlign: 'center', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', color: '#0284c7', fontWeight: '500' }}>Preparing dashboard workspace...</div>;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-      <header style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px' }}>School Admin Portal</h1>
-          <p style={{ color: 'var(--color-text-secondary)' }}>
-            Welcome, Principal / IT Lead of <strong style={{ color: '#fff' }}>{data.school_name}</strong>
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={handleContactSuperAdmin} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Send size={16} /> Contact Super Admin
-          </button>
-          <button onClick={onLogout} className="btn-secondary">Logout</button>
-        </div>
-      </header>
-
-      {successMsg && (
-        <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--color-safe)', borderRadius: '8px', color: 'var(--color-safe)', fontSize: '14px', marginBottom: '24px' }}>
-          {successMsg}
-        </div>
-      )}
-      {errorMsg && (
-        <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--color-fire)', borderRadius: '8px', color: 'var(--color-fire)', fontSize: '14px', marginBottom: '24px' }}>
-          {errorMsg}
-        </div>
-      )}
-
-      {/* Stats Cards */}
-      <div className="metrics-grid">
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Classrooms Registered</span>
-          <span className="metric-value">{data.blueprint_json?.rooms?.length || 0}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-safe)' }}>Ready for drills</span>
-        </div>
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Total Teachers</span>
-          <span className="metric-value">{data.teachers.length}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Class leaders & substitutes</span>
-        </div>
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Total Students enrolled</span>
-          <span className="metric-value">
-            {data.teachers.reduce((acc, t) => acc + t.students.length, 0)}
-          </span>
-          <span style={{ fontSize: '11px', color: 'var(--color-flood)' }}>Syncing active scores</span>
-        </div>
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Gamified Map Blueprint</span>
-          <span className="metric-value" style={{ color: data.blueprint_uploaded ? 'var(--color-safe)' : 'var(--color-fire)' }}>
-            {data.blueprint_uploaded ? 'ACTIVE' : 'INACTIVE'}
-          </span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Convert floorplan PNG/JPG</span>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px', alignItems: 'start', marginBottom: '40px' }}>
+    <div style={{ display: 'flex', width: '100%', minHeight: '100vh', margin: 0, padding: 0, fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', backgroundColor: '#f0f9ff', color: '#1e293b', boxSizing: 'border-box' }}>
+      
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         
-        {/* Blueprint Section */}
-        <div className="glass-panel" style={{ height: '100%' }}>
-          <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Compass size={20} color="var(--color-accent-primary)" />
-            School Floorplan & AI Gamification System
-          </h2>
+        .panel-card { background: #ffffff; border: 1px solid #e0f2fe; border-radius: 16px; padding: 28px; box-shadow: 0 4px 20px rgba(2, 132, 199, 0.03); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .panel-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(2, 132, 199, 0.06); }
+        
+        .btn-action { background: #0284c7; color: #ffffff; border: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15); }
+        .btn-action:hover { background: #0369a1; transform: scale(1.02); box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25); }
+        
+        .btn-secondary-link { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 14px; }
+        .btn-secondary-link:hover { background: #e0f2fe; color: #0369a1; border-color: #0284c7; }
+        
+        .btn-danger-outline { background: transparent; color: #b91c1c; border: 1px solid #fee2e2; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .btn-danger-outline:hover { background: #fef2f2; border-color: #fca5a5; }
+        
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
+        .metric-block { border-left: 5px solid #0284c7; background: #fff; }
+        .metric-num { font-size: 42px; font-weight: 700; color: #0284c7; margin: 6px 0; }
+        
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; margin-top: 8px; font-size: 14px; background: #fff; box-sizing: border-box; transition: border 0.2s; font-family: inherit; }
+        .form-control:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.1); outline: none; }
+        .label-text { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
+        
+        .map-grid-preview { display: grid; gap: 8px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .map-cell { aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
+        .map-cell:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.08); z-index: 2; }
+        .map-cell-wall { background: #334155; }
+        .map-cell-empty { background: #ffffff; border: 1px dashed #cbd5e1; }
+        .map-cell-extinguisher { background: #ffe4e6; border: 1px solid #fecaca; }
+        .map-cell-door { background: #fef9c3; border: 1px solid #fef08a; }
+        .map-cell-assembly { background: #dcfce7; border: 1px solid #bbf7d0; }
+        
+        .icon-btn { background: #f8fafc; border: 1px solid #e2e8f0; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; transition: all 0.15s; }
+        .icon-btn:hover { color: #0284c7; border-color: #0284c7; background: #ffffff; }
+        .icon-btn-del:hover { color: #b91c1c; border-color: #fca5a5; background: #fef2f2; }
+        
+        table th { text-align: left; padding: 16px; color: #475569; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #e2e8f0; background: #f1f5f9; }
+        table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; background: #ffffff; }
+        table tr:last-child td { border-bottom: none; }
+        table tr:hover td { background-color: #f8fafc; }
+        
+        .nav-button { background: transparent; border: none; color: #e0f2fe; padding: 12px 16px; border-radius: 10px; font-weight: 500; display: flex; align-items: center; gap: 12px; font-size: 14px; width: 100%', textAlign: 'left', cursor: 'pointer'; transition: all 0.2s; }
+        .nav-button:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+        .nav-button-active { background: rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-weight: 600; }
+      ` }} />
 
-          {!data.blueprint_json ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', border: '2px dashed var(--glass-border)', borderRadius: '12px' }}>
-              <Upload size={48} style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }} />
-              <p style={{ fontSize: '15px', marginBottom: '20px', color: 'var(--color-text-secondary)' }}>
-                Upload the school blueprint (architecture layout/fire safety plan JPG/PNG) to begin.
-              </p>
-              
-              <div style={{ marginBottom: '20px' }}>
-                <input type="file" accept="image/*" onChange={handleFileUpload} id="blueprint-file" style={{ display: 'none' }} />
-                <label htmlFor="blueprint-file" className="btn-secondary" style={{ cursor: 'pointer' }}>
-                  Choose Image File
-                </label>
-                {file && <span style={{ marginLeft: '10px', fontSize: '13px' }}>{file.name}</span>}
+      {/* Sky Blue Sidebar */}
+      <aside style={{ width: '280px', backgroundColor: '#0284c7', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '40px', boxSizing: 'border-box', color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldCheck size={22} color="#0284c7" />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, letterSpacing: '-0.3px' }}>Dashboard</h2>
+            <span style={{ fontSize: '12px', color: '#e0f2fe', fontWeight: '500' }}>Admin Control Center</span>
+          </div>
+        </div>
+
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+          <button 
+            type="button" 
+            onClick={() => setActiveTab('overview')} 
+            className={`nav-button ${activeTab === 'overview' ? 'nav-button-active' : ''}`}
+            style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
+          >
+            <Sliders size={18} /> Overview Console
+          </button>
+          <button 
+            type="button" 
+            onClick={() => setActiveTab('performance')} 
+            className={`nav-button ${activeTab === 'performance' ? 'nav-button-active' : ''}`}
+            style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
+          >
+            <Users size={18} /> Performance Registry
+          </button>
+        </nav>
+
+        <button type="button" onClick={onLogout} style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', padding: '12px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }}>
+          Sign Out
+        </button>
+      </aside>
+
+      {/* Main Panel Surface */}
+      <main style={{ flex: 1, padding: '40px', boxSizing: 'border-box', overflowY: 'auto' }}>
+        
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+              {activeTab === 'overview' ? 'System Infrastructure Overview' : 'Institutional Performance Registers'}
+            </h1>
+            <p style={{ color: '#64748b', margin: '4px 0 0 0', fontSize: '15px', fontWeight: '500' }}>Welcome back, Workspace Coordinator</p>
+          </div>
+        </header>
+
+        {successMsg && (
+          <div style={{ padding: '16px 20px', background: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: '12px', color: '#166534', fontSize: '14px', fontWeight: '500', marginBottom: '24px' }}>
+            {successMsg}
+          </div>
+        )}
+        {errorMsg && (
+          <div style={{ padding: '16px 20px', background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '12px', color: '#991b1b', fontSize: '14px', fontWeight: '500', marginBottom: '24px' }}>
+            {errorMsg}
+          </div>
+        )}
+
+        {/* METRICS & OVERVIEW VIEW LAYER */}
+        {activeTab === 'overview' && (
+          <>
+            {/* Metrics Row */}
+            <div className="metrics-grid">
+              <div className="panel-card metric-block">
+                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Total Rooms</span>
+                <span className="metric-num">{data?.blueprint_json?.rooms?.length || 4}</span>
+                <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: '600' }}>Active profiles</span>
               </div>
-
-              {file && !isScanning && (
-                <button onClick={startAIScan} className="btn-primary">
-                  Run AI Blueprint Parser
-                </button>
-              )}
-
-              {isScanning && (
-                <div style={{ marginTop: '20px' }} className="ai-scanline-container">
-                  <div className="ai-scanline"></div>
-                  <p style={{ fontSize: '14px', marginBottom: '10px', color: 'var(--color-accent-primary)', fontWeight: 'bold' }}>
-                    AI Scan & Obstacle Mapping: {scanProgress}%
-                  </p>
-                  <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px' }}>
-                    <div style={{ width: `${scanProgress}%`, height: '100%', background: 'var(--color-accent-primary)', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
-                  </div>
-                </div>
-              )}
+              <div className="panel-card metric-block">
+                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Configured Staff</span>
+                <span className="metric-num">{data?.teachers?.length || 2}</span>
+                <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: '600' }}>Active leaders</span>
+              </div>
+              <div className="panel-card metric-block">
+                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Enrolled Students</span>
+                <span className="metric-num">
+                  {data?.teachers ? data.teachers.reduce((acc, t) => acc + (t.students?.length || 0), 0) : 3}
+                </span>
+                <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: '600' }}>Sync status green</span>
+              </div>
+              <div className="panel-card metric-block">
+                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Blueprint Node</span>
+                <span className="metric-num" style={{ color: '#0284c7' }}>Active</span>
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Floorplan matrix live</span>
+              </div>
             </div>
-          ) : (
-            <div>
-              <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
-                <strong>Map Editor:</strong> Tap grid cells to modify elements. Make sure the school has at least one Green Assembly Area exit and Red Fire Extinguishers!
-              </p>
 
-              {/* Grid cell selector */}
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                {[
-                  { id: 'wall', label: 'Wall (Blocks)', color: '#374151' },
-                  { id: 'empty', label: 'Walkway (Free)', color: 'rgba(255,255,255,0.05)' },
-                  { id: 'door', label: 'Class Door', color: '#f59e0b' },
-                  { id: 'extinguisher', label: 'Fire Extinguisher', color: '#ef4444' },
-                  { id: 'assembly', label: 'Assembly Area', color: '#10b981' }
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedCellType(item.id)}
-                    style={{
-                      background: selectedCellType === item.id ? 'var(--color-accent-primary)' : 'rgba(255,255,255,0.02)',
-                      border: `1px solid ${selectedCellType === item.id ? 'var(--color-accent-primary)' : 'var(--glass-border)'}`,
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span style={{ width: '12px', height: '12px', background: item.color, borderRadius: '2px', display: 'inline-block' }}></span>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+            {/* Dynamic Splits */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '32px', alignItems: 'start' }}>
+              
+              {/* Spatial Map Component */}
+              <div className="panel-card">
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Compass size={20} color="#0284c7" /> Blueprint Layout Engine
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 24px 0', fontWeight: '500' }}>
+                  Select a design asset to overlay positioning nodes onto your mapped matrix.
+                </p>
 
-              {/* Map grid display */}
-              <div className="map-grid-preview" style={{ gridTemplateColumns: `repeat(${data.blueprint_json.width}, 1fr)` }}>
-                {data.blueprint_json.grid.map((row, rIdx) => 
-                  row.map((cell, cIdx) => {
-                    let cellClass = 'map-cell-empty';
-                    let displayChar = '';
-                    if (cell === 1) cellClass = 'map-cell-wall';
-                    if (cell === 2) { cellClass = 'map-cell-extinguisher'; displayChar = '🧯'; }
-                    if (cell === 3) { cellClass = 'map-cell-door'; displayChar = '🚪'; }
-                    if (cell === 5) { cellClass = 'map-cell-assembly'; displayChar = '🚩'; }
+                {!data?.blueprint_json ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', border: '2px dashed #bae6fd', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+                    <Upload size={36} style={{ color: '#38bdf8', marginBottom: '16px' }} />
+                    <p style={{ fontSize: '14px', marginBottom: '20px', color: '#475569', fontWeight: '500' }}>
+                      Provide blueprint grid asset to deploy layout workspace.
+                    </p>
+                    <input type="file" accept="image/*" onChange={handleFileUpload} id="blueprint-file" style={{ display: 'none' }} />
+                    <label htmlFor="blueprint-file" className="btn-secondary-link" style={{ cursor: 'pointer' }}>
+                      Locate Source File
+                    </label>
+                    {file && <button type="button" onClick={startAIScan} className="btn-action" style={{ marginLeft: '12px' }}>Initialize Grid Parser</button>}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '24px' }}>
+                      {[
+                        { id: 'wall', label: 'Wall Asset', color: '#334155' },
+                        { id: 'empty', label: 'Walkway Unit', color: '#ffffff' },
+                        { id: 'door', label: 'Access Point', color: '#fef9c3' },
+                        { id: 'extinguisher', label: 'Extinguisher', color: '#ffe4e6' },
+                        { id: 'assembly', label: 'Assembly Zone', color: '#dcfce7' }
+                      ].map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedCellType(item.id)}
+                          style={{
+                            background: selectedCellType === item.id ? '#0284c7' : '#ffffff',
+                            border: `1px solid ${selectedCellType === item.id ? '#0284c7' : '#cbd5e1'}`,
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            color: selectedCellType === item.id ? '#ffffff' : '#334155',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          <span style={{ width: '12px', height: '12px', background: item.color, borderRadius: '3px', border: '1px solid #cbd5e1' }}></span>
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
 
-                    return (
-                      <div
-                        key={`${rIdx}-${cIdx}`}
-                        onClick={() => handleCellClick(rIdx, cIdx)}
-                        className={`map-cell ${cellClass}`}
-                      >
-                        {displayChar}
-                      </div>
-                    );
-                  })
+                    <div className="map-grid-preview" style={{ gridTemplateColumns: `repeat(${data.blueprint_json.width || 1}, 1fr)` }}>
+                      {data.blueprint_json.grid?.map((row, rIdx) => 
+                        row.map((cell, cIdx) => {
+                          let cellClass = 'map-cell-empty';
+                          let displayChar = '';
+                          if (cell === 1) cellClass = 'map-cell-wall';
+                          if (cell === 2) { cellClass = 'map-cell-extinguisher'; displayChar = '🧯'; }
+                          if (cell === 3) { cellClass = 'map-cell-door'; displayChar = '🚪'; }
+                          if (cell === 5) { cellClass = 'map-cell-assembly'; displayChar = '🚩'; }
+
+                          return (
+                            <div key={`${rIdx}-${cIdx}`} onClick={() => handleCellClick(rIdx, cIdx)} className={`map-cell ${cellClass}`}>
+                              {displayChar}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div style={{ marginTop: '24px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Purge spatial records?")) {
+                            setData(prev => ({ ...prev, blueprint_json: null }));
+                            fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ blueprint_json: null })
+                            });
+                          }
+                        }}
+                        className="btn-danger-outline"
+                      >Wipe Configuration Layout</button>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              <div style={{ marginTop: '24px', display: 'flex', gap: '16px' }}>
-                <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to reset the blueprint? This will delete the current layout.")) {
-                      setData(prev => ({ ...prev, blueprint_json: null }));
-                      // Send call to reset
-                      fetch(`http://localhost:3001/api/admin/${user.id}/blueprint`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ blueprint_json: null })
-                      });
-                    }
-                  }}
-                  className="btn-danger"
-                  style={{ padding: '8px 16px', fontSize: '13px' }}
-                >
-                  Reset Layout
-                </button>
-                <button onClick={handleContactSuperAdmin} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '13px' }}>
-                  Flag Conversion Bug
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+              {/* User Enrollment Form */}
+              <div className="panel-card">
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <UserPlus size={20} color="#0284c7" /> {isEditingTeacher ? 'Update Instructor Attributes' : 'Staff Profile Onboarding'}
+                </h3>
 
-        {/* Manage Teachers */}
-        <div className="glass-panel">
-          <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <UserPlus size={20} color="var(--color-accent-primary)" />
-            {isEditingTeacher ? 'Edit Teacher Class' : 'Create Teacher Credentials'}
-          </h2>
-
-          <form onSubmit={handleCreateTeacher} style={{ marginBottom: '24px' }}>
-            <div className="form-group">
-              <label className="form-label">Full Name</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Johnathan Miller"
-                value={tName}
-                onChange={e => setTName(e.target.value)}
-                required
-              />
-            </div>
-            
-            {!isEditingTeacher && (
-              <div className="form-group">
-                <label className="form-label">Unique Login ID / Username</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. T-104"
-                  value={tUsername}
-                  onChange={e => setTUsername(e.target.value)}
-                  required
-                />
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="form-label">Password {isEditingTeacher && '(Leave blank to keep unchanged)'}</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder={isEditingTeacher ? '••••••••' : 'Provide temporary password'}
-                value={tPassword}
-                onChange={e => setTPassword(e.target.value)}
-                required={!isEditingTeacher}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Class Assigned (e.g. Class 10-A, Floater)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Classroom name or leave as 'Substitute'"
-                value={tClass}
-                onChange={e => setTClass(e.target.value)}
-                required
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-                {isEditingTeacher ? 'Save Changes' : 'Generate Account'}
-              </button>
-              {isEditingTeacher && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditingTeacher(null);
-                    setTName('');
-                    setTUsername('');
-                    setTClass('');
-                    setTPassword('');
-                  }}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Teachers list and Student details */}
-      <div className="glass-panel">
-        <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Users size={20} color="var(--color-accent-primary)" />
-          Teachers & Student Performance Index
-        </h2>
-
-        {data.teachers.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '20px' }}>
-            No teachers registered yet. Use the sidebar to create accounts.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {data.teachers.map(teacher => {
-              // Calculate class metrics
-              const drillScores = teacher.students.flatMap(s => s.scores.filter(sc => sc.activity_type === 'drill'));
-              const avgEvacTime = drillScores.length > 0
-                ? Math.round(drillScores.reduce((acc, s) => acc + s.duration_seconds, 0) / drillScores.length)
-                : null;
-
-              return (
-                <div key={teacher.teacher_id} style={{ border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '20px', background: 'rgba(255,255,255,0.01)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px', marginBottom: '16px' }}>
-                    <div>
-                      <h3 style={{ fontSize: '18px', color: '#fff' }}>{teacher.teacher_name}</h3>
-                      <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                        Username: <code style={{ color: 'var(--color-accent-primary)' }}>{teacher.teacher_username}</code> | Assigned: <strong>{teacher.class_assigned || 'Substitute/Unassigned'}</strong>
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      {avgEvacTime && (
-                        <div style={{ textAlign: 'right', marginRight: '10px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', display: 'block' }}>Avg Evacuation</span>
-                          <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-safe)' }}>{avgEvacTime}s</span>
-                        </div>
-                      )}
-                      <button onClick={() => handleEditTeacherClick(teacher)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => handleDeleteTeacher(teacher.teacher_id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-fire)' }}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                <form onSubmit={handleCreateTeacher}>
+                  <div style={{ marginBottom: '18px' }}>
+                    <label className="label-text">Legal Full Name</label>
+                    <input type="text" className="form-control" placeholder="e.g. Jonathan Miller" value={tName} onChange={e => setTName(e.target.value)} required />
                   </div>
-
-                  {/* Student list under this teacher */}
-                  {teacher.students.length === 0 ? (
-                    <p style={{ fontStyle: 'italic', fontSize: '13px', color: 'var(--color-text-muted)' }}>
-                      No students assigned to this teacher yet.
-                    </p>
-                  ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                            <th style={{ padding: '8px 4px', color: 'var(--color-text-secondary)' }}>Roll No</th>
-                            <th style={{ padding: '8px 4px', color: 'var(--color-text-secondary)' }}>Student Name</th>
-                            <th style={{ padding: '8px 4px', color: 'var(--color-text-secondary)', textAlign: 'center' }}>Fire Drill (Score/Time)</th>
-                            <th style={{ padding: '8px 4px', color: 'var(--color-text-secondary)', textAlign: 'center' }}>Earthquake Quiz</th>
-                            <th style={{ padding: '8px 4px', color: 'var(--color-text-secondary)', textAlign: 'center' }}>Flood Quiz</th>
-                            <th style={{ padding: '8px 4px', color: 'var(--color-text-secondary)', textAlign: 'center' }}>Landslide Quiz</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {teacher.students.map(student => {
-                            const fireDrill = student.scores.find(sc => sc.disaster_type === 'fire' && sc.activity_type === 'drill');
-                            const eqQuiz = student.scores.find(sc => sc.disaster_type === 'earthquake' && sc.activity_type === 'quiz');
-                            const floodQuiz = student.scores.find(sc => sc.disaster_type === 'flood' && sc.activity_type === 'quiz');
-                            const lsQuiz = student.scores.find(sc => sc.disaster_type === 'landslide' && sc.activity_type === 'quiz');
-
-                            return (
-                              <tr key={student.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                                <td style={{ padding: '10px 4px', fontWeight: 'bold' }}>{student.roll_no}</td>
-                                <td style={{ padding: '10px 4px' }}>{student.name}</td>
-                                <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                                  {fireDrill ? (
-                                    <span style={{ color: 'var(--color-safe)' }}>
-                                      {fireDrill.score}pts ({fireDrill.duration_seconds}s)
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: 'var(--color-text-muted)' }}>-</span>
-                                  )}
-                                </td>
-                                <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                                  {eqQuiz ? `${eqQuiz.score}%` : <span style={{ color: 'var(--color-text-muted)' }}>-</span>}
-                                </td>
-                                <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                                  {floodQuiz ? `${floodQuiz.score}%` : <span style={{ color: 'var(--color-text-muted)' }}>-</span>}
-                                </td>
-                                <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                                  {lsQuiz ? `${lsQuiz.score}%` : <span style={{ color: 'var(--color-text-muted)' }}>-</span>}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                  
+                  {!isEditingTeacher && (
+                    <div style={{ marginBottom: '18px' }}>
+                      <label className="label-text">Login ID / Access Tag</label>
+                      <input type="text" className="form-control" placeholder="e.g. T-104" value={tUsername} onChange={e => setTUsername(e.target.value)} required />
                     </div>
                   )}
-                </div>
-              );
-            })}
+
+                  <div style={{ marginBottom: '18px' }}>
+                    <label className="label-text">Security Key {isEditingTeacher && '(Omit to protect existing)'}</label>
+                    <input type="password" className="form-control" placeholder="••••••••" value={tPassword} onChange={e => setTPassword(e.target.value)} required={!isEditingTeacher} />
+                  </div>
+
+                  <div style={{ marginBottom: '28px' }}>
+                    <label className="label-text">Room Assignment Scope</label>
+                    <input type="text" className="form-control" placeholder="e.g. Room 12-B" value={tClass} onChange={e => setTClass(e.target.value)} required />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button type="submit" className="btn-action" style={{ flex: 1 }}>{isEditingTeacher ? 'Commit System Updates' : 'Authorize Account Creation'}</button>
+                    {isEditingTeacher && (
+                      <button type="button" onClick={() => { setIsEditingTeacher(null); setTName(''); setTUsername(''); setTClass(''); setTPassword(''); }} className="btn-secondary-link">Abort</button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+            </div>
+          </>
+        )}
+
+        {/* SEPARATE PERFORMANCE TABS LAYER */}
+        {activeTab === 'performance' && (
+          <div className="panel-card">
+            {!data?.teachers || data.teachers.length === 0 ? (
+              <p style={{ color: '#64748b', textAlign: 'center', padding: '32px 0', fontSize: '14px', fontWeight: '500' }}>No profile accounts registered in current database stack.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                {data.teachers.map(teacher => {
+                  const drillScores = teacher.students ? teacher.students.flatMap(s => (s.scores || []).filter(sc => sc.activity_type === 'drill')) : [];
+                  const avgEvacTime = drillScores.length > 0 ? Math.round(drillScores.reduce((acc, s) => acc + s.duration_seconds, 0) / drillScores.length) : null;
+
+                  return (
+                    <div key={teacher.teacher_id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#ffffff' }}>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <div>
+                          <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>{teacher.teacher_name}</h4>
+                          <span style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'inline-block', fontWeight: '500' }}>
+                            Tag: <strong style={{ color: '#334155', fontFamily: 'monospace' }}>{teacher.teacher_username}</strong> &bull; Zone Target: <strong style={{ color: '#334155' }}>{teacher.class_assigned || 'Unassigned'}</strong>
+                          </span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          {avgEvacTime !== null && (
+                            <div style={{ background: '#f0f9ff', padding: '6px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0369a1' }}>{avgEvacTime}s Average Velocity</span>
+                            </div>
+                          )}
+                          <button type="button" onClick={() => { handleEditTeacherClick(teacher); setActiveTab('overview'); }} className="icon-btn" aria-label="Modify profile"><Edit2 size={14} /></button>
+                          <button type="button" onClick={() => handleDeleteTeacher(teacher.teacher_id)} className="icon-btn icon-btn-del" aria-label="Drop account"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+
+                      {teacher.students && teacher.students.length > 0 ? (
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr>
+                                <th>Roll Number</th>
+                                <th>Student Identity</th>
+                                <th>Drill Response</th>
+                                <th>Seismic Evaluation</th>
+                                <th>Hydrological Quiz</th>
+                                <th>Erosion Assessment</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {teacher.students.map(student => {
+                                const studentScores = student.scores || [];
+                                const fireDrill = studentScores.find(sc => sc.disaster_type === 'fire' && sc.activity_type === 'drill');
+                                const eqQuiz = studentScores.find(sc => sc.disaster_type === 'earthquake' && sc.activity_type === 'quiz');
+                                const floodQuiz = studentScores.find(sc => sc.disaster_type === 'flood' && sc.activity_type === 'quiz');
+                                const lsQuiz = studentScores.find(sc => sc.disaster_type === 'landslide' && sc.activity_type === 'quiz');
+
+                                return (
+                                  <tr key={student.id || student.roll_no}>
+                                    <td style={{ color: '#64748b', fontWeight: '600', fontFamily: 'monospace' }}>{student.roll_no}</td>
+                                    <td style={{ fontWeight: '600', color: '#0f172a' }}>{student.name}</td>
+                                    <td style={{ color: '#0284c7', fontWeight: '700' }}>{fireDrill ? `${fireDrill.score} pts` : '—'}</td>
+                                    <td style={{ fontWeight: '500' }}>{eqQuiz ? `${eqQuiz.score}%` : '—'}</td>
+                                    <td style={{ fontWeight: '500' }}>{floodQuiz ? `${floodQuiz.score}%` : '—'}</td>
+                                    <td style={{ fontWeight: '500' }}>{lsQuiz ? `${lsQuiz.score}%` : '—'}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div style={{ color: '#64748b', fontSize: '13px', padding: '20px 24px', fontWeight: '500', background: '#ffffff', fontStyle: 'italic' }}>
+                          No records linked to this command profile node.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
-      </div>
+
+      </main>
     </div>
   );
 }

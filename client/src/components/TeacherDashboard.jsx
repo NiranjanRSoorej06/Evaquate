@@ -1,406 +1,244 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Upload, Download, Trash2, Award, Users, BarChart3, TrendingUp } from 'lucide-react';
+import { Plus, ShieldAlert, FileText, CheckCircle, LogOut, LayoutDashboard, Building2 } from 'lucide-react';
 
-export default function TeacherDashboard({ user, onLogout }) {
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function SuperAdminDashboard({ user, onLogout }) {
+  const [schools, setSchools] = useState([]);
+  const [sidebarTab, setSidebarTab] = useState('directory'); // 'directory', 'register'
   
-  // Student form state
-  const [sName, setSName] = useState('');
-  const [sRoll, setSRoll] = useState('');
+  // School Form State
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   
-  // CSV file import state
-  const [csvContent, setCsvContent] = useState('');
-  const [csvFile, setCsvFile] = useState(null);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const fetchStudents = async () => {
+  const fetchSchools = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/students`);
+      const response = await fetch('http://localhost:3001/api/superadmin/schools');
       const data = await response.json();
-      setStudents(data.students);
+      setSchools(data || []);
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStudents();
+    fetchSchools();
   }, []);
 
-  const handleAddStudent = async (e) => {
+  const handleRegisterSchool = async (e) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+    setError('');
+    setMessage('');
 
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/students`, {
+      const response = await fetch('http://localhost:3001/api/superadmin/schools', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: sName, roll_no: sRoll, school_id: user.school_id })
+        body: JSON.stringify({ name, unique_code: code, password })
       });
       const data = await response.json();
       if (data.success) {
-        setSuccessMsg(`Student "${sName}" added. Password is set as full name.`);
-        setSName('');
-        setSRoll('');
-        fetchStudents();
+        setMessage(`School registered successfully! ID: ${code}`);
+        setName('');
+        setCode('');
+        setPassword('');
+        fetchSchools();
       } else {
-        setErrorMsg(data.message || 'Failed to add student.');
+        setError(data.message || 'Failed to register school.');
       }
     } catch (err) {
-      setErrorMsg('Connection error.');
+      setError('Connection failure.');
     }
   };
-
-  const handleDeleteStudent = async (studentId) => {
-    if (!window.confirm("Are you sure you want to delete this student?")) return;
-    try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/students/${studentId}`, {
-        method: 'DELETE'
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSuccessMsg('Student record removed.');
-        fetchStudents();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // CSV Template downloader (Data URI)
-  const downloadCsvTemplate = () => {
-    const csvContent = "roll_no,name\n103,Peter Parker\n104,Bruce Wayne\n105,Clark Kent\n";
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "student_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Parse CSV Client Side
-  const handleCsvUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setCsvFile(file);
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const text = evt.target.result;
-      setCsvContent(text);
-    };
-    reader.readAsText(file);
-  };
-
-  const processCsvImport = async () => {
-    if (!csvContent) return;
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    const lines = csvContent.split('\n');
-    const importedStudents = [];
-
-    // Skip header line (roll_no, name)
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      const parts = line.split(',');
-      if (parts.length >= 2) {
-        const roll = parts[0].trim();
-        const name = parts.slice(1).join(',').replace(/^"|"$/g, '').trim(); // support names with commas
-        if (roll && name) {
-          importedStudents.push({ roll_no: roll, name });
-        }
-      }
-    }
-
-    if (importedStudents.length === 0) {
-      setErrorMsg('No valid rows found in CSV.');
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/students/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ students: importedStudents, school_id: user.school_id })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSuccessMsg(`Successfully imported ${data.addedCount} students! (Skipped ${data.skippedCount} duplicates/invalid rows)`);
-        setCsvFile(null);
-        setCsvContent('');
-        fetchStudents();
-      }
-    } catch (err) {
-      setErrorMsg('Failed to process bulk upload.');
-    }
-  };
-
-  // Calculate stats for Analytics Dashboard
-  const allScores = students.flatMap(s => s.scores || []);
-  const quizScores = allScores.filter(sc => sc.activity_type === 'quiz');
-  const drillScores = allScores.filter(sc => sc.activity_type === 'drill');
-
-  const avgQuizScore = quizScores.length > 0 
-    ? Math.round(quizScores.reduce((acc, s) => acc + s.score, 0) / quizScores.length) 
-    : 0;
-
-  const avgDrillScore = drillScores.length > 0 
-    ? Math.round(drillScores.reduce((acc, s) => acc + s.score, 0) / drillScores.length) 
-    : 0;
-
-  const avgEvacuationTime = drillScores.length > 0 
-    ? Math.round(drillScores.reduce((acc, s) => acc + s.duration_seconds, 0) / drillScores.length) 
-    : 0;
-
-  // Calculate disaster averages for chart
-  const disasters = ['fire', 'earthquake', 'flood', 'landslide'];
-  const quizAverages = disasters.map(type => {
-    const matching = quizScores.filter(sc => sc.disaster_type === type);
-    const avg = matching.length > 0 ? Math.round(matching.reduce((acc, s) => acc + s.score, 0) / matching.length) : 0;
-    return { name: type.charAt(0).toUpperCase() + type.slice(1), value: avg };
-  });
-
-  const drillAverages = disasters.map(type => {
-    const matching = drillScores.filter(sc => sc.disaster_type === type);
-    const avg = matching.length > 0 ? Math.round(matching.reduce((acc, s) => acc + s.score, 0) / matching.length) : 0;
-    return { name: type.charAt(0).toUpperCase() + type.slice(1), value: avg };
-  });
-
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading teacher account...</div>;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-      <header style={{ display: 'flex', justifySelf: 'stretch', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '40px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px' }}>Teacher Dashboard</h1>
-          <p style={{ color: 'var(--color-text-secondary)' }}>
-            Welcome, <strong>{user.name}</strong> | School: {user.school_name} | Class Assigned: <strong>{user.class_assigned || 'Substitute'}</strong>
-          </p>
-        </div>
-        <button onClick={onLogout} className="btn-secondary">Logout</button>
-      </header>
-
-      {successMsg && (
-        <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--color-safe)', borderRadius: '8px', color: 'var(--color-safe)', fontSize: '14px', marginBottom: '24px' }}>
-          {successMsg}
-        </div>
-      )}
-      {errorMsg && (
-        <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--color-fire)', borderRadius: '8px', color: 'var(--color-fire)', fontSize: '14px', marginBottom: '24px' }}>
-          {errorMsg}
-        </div>
-      )}
-
-      {/* Analytics Summary */}
-      <div className="metrics-grid">
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Class Size</span>
-          <span className="metric-value">{students.length}</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-safe)' }}>Active Students</span>
-        </div>
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Class Quiz Avg</span>
-          <span className="metric-value">{avgQuizScore}%</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Goal: &gt; 80% passing</span>
-        </div>
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Safety Drill Success</span>
-          <span className="metric-value">{avgDrillScore} pts</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Evaluated evacuations</span>
-        </div>
-        <div className="glass-panel metric-card">
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>Avg Evacuation Time</span>
-          <span className="metric-value">{avgEvacuationTime}s</span>
-          <span style={{ fontSize: '11px', color: 'var(--color-safe)' }}>Safe &lt; 60 seconds</span>
-        </div>
-      </div>
-
-      {/* Charts section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px', marginBottom: '40px', alignItems: 'stretch' }}>
+    <div style={{ display: 'flex', width: '100%', minHeight: '100vh', backgroundColor: '#f0f9ff', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         
-        {/* Analytics Visualization */}
-        <div className="glass-panel">
-          <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BarChart3 size={20} color="var(--color-accent-primary)" />
-            Class Analytics Dashboard
-          </h2>
+        .sidebar-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 18px; border: none; background: transparent; color: #e0f2fe; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; font-weight: 500; }
+        .sidebar-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+        .sidebar-active { background: rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-weight: 600; }
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-            <div>
-              <h3 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--color-text-secondary)' }}>Average Quiz Scores (%)</h3>
-              <div className="bar-chart-container">
-                {quizAverages.map(bar => (
-                  <div key={bar.name} className="bar-wrapper">
-                    <div className="bar-column" style={{ height: `${bar.value}%` }}>
-                      <span className="bar-value">{bar.value}%</span>
-                    </div>
-                    <span className="bar-label">{bar.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        .premium-card { background: #fff; border-radius: 20px; padding: 24px; border: 1px solid #e0f2fe; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.03); }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 13px; fontWeight: 600; color: #64748b; margin-bottom: 6px; }
+        .form-input { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #bae6fd; background: #fff; color: #1e293b; font-size: 14px; outline: none; transition: all 0.2s; box-sizing: border-box; }
+        .form-input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+        
+        .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: #0284c7; color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+        .btn-primary:hover { background: #0369a1; transform: translateY(-1px); }
 
-            <div>
-              <h3 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--color-text-secondary)' }}>Average Drill Scores (pts)</h3>
-              <div className="bar-chart-container">
-                {drillAverages.map(bar => (
-                  <div key={bar.name} className="bar-wrapper">
-                    <div className="bar-column" style={{ height: `${bar.value}%`, background: 'linear-gradient(to top, var(--color-safe), var(--color-accent-primary))' }}>
-                      <span className="bar-value">{bar.value}</span>
-                    </div>
-                    <span className="bar-label">{bar.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .data-table th { padding: 16px 12px; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e0f2fe; }
+        .data-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; background: #fff; }
+        .data-table tr:last-child td { border-bottom: none; }
+      ` }} />
+
+      {/* SIDEBAR NAVIGATION */}
+      <aside style={{ width: '280px', background: '#0284c7', padding: '32px 20px', display: 'flex', flexDirection: 'column', color: '#fff', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 8px' }}>
+          <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
+            <LayoutDashboard size={24} color="#0284c7" />
           </div>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Super Hub</h2>
         </div>
 
-        {/* Add / Import Panel */}
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button onClick={() => setSidebarTab('directory')} className={`sidebar-item ${sidebarTab === 'directory' ? 'sidebar-active' : ''}`}>
+            <FileText size={18} /> Institution Directory
+          </button>
+          <button onClick={() => setSidebarTab('register')} className={`sidebar-item ${sidebarTab === 'register' ? 'sidebar-active' : ''}`}>
+            <Plus size={18} /> Register Campus
+          </button>
+        </nav>
+
+        <button onClick={onLogout} className="sidebar-item" style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)' }}>
+          <LogOut size={18} /> Sign Out
+        </button>
+      </aside>
+
+      {/* MAIN VIEWING CANVAS */}
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto', boxSizing: 'border-box' }}>
+        {/* Workspace Top Header */}
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
-            <h2 style={{ fontSize: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={20} color="var(--color-accent-primary)" />
-              Student Registration & Import
-            </h2>
-            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '20px' }}>
-              Register students manually, or import them in bulk using our spreadsheet template.
+            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', marginBottom: '6px', margin: 0 }}>
+              {sidebarTab === 'directory' ? 'Global Network Directory' : 'System Provisioning Engine'}
+            </h1>
+            <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
+              Root Operator: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user.username}</span> | Domain Status: <span style={{ fontWeight: '600', color: '#10b981' }}>Active</span>
             </p>
           </div>
+        </header>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-            {/* Manual Form */}
-            <form onSubmit={handleAddStudent} style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px', marginBottom: '10px' }}>
+        {/* Messaging Banners */}
+        {message && (
+          <div style={{ padding: '16px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '12px', color: '#065f46', fontSize: '14px', fontWeight: '500', marginBottom: '24px' }}>
+            ✓ {message}
+          </div>
+        )}
+        {error && (
+          <div style={{ padding: '16px', background: '#fff5f5', border: '1px solid #fca5a5', borderRadius: '12px', color: '#991b1b', fontSize: '14px', fontWeight: '500', marginBottom: '24px' }}>
+            ✕ {error}
+          </div>
+        )}
+
+        {/* TAB 1: SCHOOL DIRECTORY */}
+        {sidebarTab === 'directory' && (
+          <div className="premium-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '24px 24px 12px 24px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <Building2 size={20} color="#0284c7" /> Managed Educational Campuses
+              </h2>
+            </div>
+
+            {schools.length === 0 ? (
+              <p style={{ color: '#64748b', textAlign: 'center', padding: '40px', fontSize: '14px' }}>
+                No schools found within the central system repository registry.
+              </p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>School Name</th>
+                      <th>Unique Code</th>
+                      <th>Blueprint State</th>
+                      <th style={{ textAlign: 'center' }}>Teachers</th>
+                      <th style={{ textAlign: 'center' }}>Students</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schools.map(s => (
+                      <tr key={s.id}>
+                        <td style={{ fontWeight: '600', color: '#0f172a' }}>{s.name}</td>
+                        <td>
+                          <code style={{ background: '#f0f9ff', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', color: '#0369a1', border: '1px solid #e0f2fe' }}>
+                            {s.unique_code}
+                          </code>
+                        </td>
+                        <td>
+                          {s.blueprint_json ? (
+                            <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600' }}>
+                              <CheckCircle size={14} /> Ready
+                            </span>
+                          ) : (
+                            <span style={{ color: '#ef4444', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600' }}>
+                              <ShieldAlert size={14} /> Pending Upload
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center', fontWeight: '500' }}>{s.teacher_count || 0}</td>
+                        <td style={{ textAlign: 'center', fontWeight: '500' }}>{s.student_count || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: REGISTER NEW SCHOOL */}
+        {sidebarTab === 'register' && (
+          <div className="premium-card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <div style={{ borderBottom: '1px solid #e0f2fe', paddingBottom: '16px', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={20} color="#0284c7" /> Provision New Database Entity
+              </h2>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                Establish a clean operational database slice and access credentials for a target academic facility.
+              </p>
+            </div>
+
+            <form onSubmit={handleRegisterSchool}>
+              <div className="form-group">
+                <label className="form-label">School Name</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Student Full Name"
-                  value={sName}
-                  onChange={e => setSName(e.target.value)}
-                  required
-                />
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Roll No"
-                  value={sRoll}
-                  onChange={e => setSRoll(e.target.value)}
+                  placeholder="e.g. Springfield Elementary"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   required
                 />
               </div>
-              <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                <Plus size={16} /> Add Individual Student
+
+              <div className="form-group">
+                <label className="form-label">Unique School ID Code</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. SCH-78901"
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Access Passphrase</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  placeholder="Initialize root entity password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}>
+                <Plus size={16} /> Finalize Node Registration
               </button>
             </form>
-
-            {/* Excel / CSV Import */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 'bold' }}>Excel / CSV Import</span>
-                <button type="button" onClick={downloadCsvTemplate} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Download size={12} /> Template
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleCsvUpload}
-                  id="csv-file"
-                  style={{ display: 'none' }}
-                />
-                <label htmlFor="csv-file" className="btn-secondary" style={{ flex: 1, cursor: 'pointer', textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
-                  <Upload size={16} /> {csvFile ? csvFile.name : 'Select CSV File'}
-                </label>
-                {csvFile && (
-                  <button onClick={processCsvImport} className="btn-primary">
-                    Import
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Roster Listing */}
-      <div className="glass-panel">
-        <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TrendingUp size={20} color="var(--color-accent-primary)" />
-          Student Performance roster
-        </h2>
-
-        {students.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '30px' }}>
-            No students registered in this classroom yet. Use the sidebar to upload your class roster.
-          </p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>Roll No</th>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>Full Name</th>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>Temp Password</th>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px', textAlign: 'center' }}>Fire Drill</th>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px', textAlign: 'center' }}>EQ Quiz</th>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px', textAlign: 'center' }}>Flood Quiz</th>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px', textAlign: 'center' }}>Landslide Quiz</th>
-                <th style={{ padding: '12px 8px', color: 'var(--color-text-secondary)', fontSize: '13px', textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map(student => {
-                const fireDrill = student.scores.find(sc => sc.disaster_type === 'fire' && sc.activity_type === 'drill');
-                const eqQuiz = student.scores.find(sc => sc.disaster_type === 'earthquake' && sc.activity_type === 'quiz');
-                const floodQuiz = student.scores.find(sc => sc.disaster_type === 'flood' && sc.activity_type === 'quiz');
-                const lsQuiz = student.scores.find(sc => sc.disaster_type === 'landslide' && sc.activity_type === 'quiz');
-
-                return (
-                  <tr key={student.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    <td style={{ padding: '16px 8px', fontWeight: 'bold' }}>{student.roll_no}</td>
-                    <td style={{ padding: '16px 8px', fontWeight: '600' }}>{student.name}</td>
-                    <td style={{ padding: '16px 8px' }}><code style={{ background: 'rgba(255,255,255,0.03)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>{student.name}</code></td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                      {fireDrill ? (
-                        <span style={{ color: 'var(--color-safe)' }}>{fireDrill.score}pts ({fireDrill.duration_seconds}s)</span>
-                      ) : (
-                        <span style={{ color: 'var(--color-text-muted)' }}>-</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                      {eqQuiz ? `${eqQuiz.score}%` : <span style={{ color: 'var(--color-text-muted)' }}>-</span>}
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                      {floodQuiz ? `${floodQuiz.score}%` : <span style={{ color: 'var(--color-text-muted)' }}>-</span>}
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                      {lsQuiz ? `${lsQuiz.score}%` : <span style={{ color: 'var(--color-text-muted)' }}>-</span>}
-                    </td>
-                    <td style={{ padding: '16px 8px', textAlign: 'right' }}>
-                      <button onClick={() => handleDeleteStudent(student.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-fire)' }}>
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         )}
-      </div>
+      </main>
     </div>
   );
 }
