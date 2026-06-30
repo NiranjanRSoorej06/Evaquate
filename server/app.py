@@ -17,7 +17,7 @@ import db
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins='http://localhost:5173', supports_credentials=True)
+CORS(app, origins=['http://localhost:5173', 'http://localhost:5174'], supports_credentials=True)
 
 PORT = int(os.environ.get('PORT', 3001))
 JWT_SECRET = os.environ.get('JWT_SECRET', 'super_secret_jwt_key_123')
@@ -292,6 +292,12 @@ def auth_login():
                 set_session_and_cookie(resp, user_payload)
                 return resp
             elif user['role'] == 'teacher':
+                # Check if school is disabled
+                if user['school_id']:
+                    school_check = sql('SELECT disabled FROM schools WHERE id = $1', [user['school_id']])
+                    if school_check['rowCount'] > 0 and school_check['rows'][0].get('disabled'):
+                        return jsonify({'success': False, 'message': 'This school has been disabled. Access is not permitted.'}), 403
+                
                 user_payload = {
                     'id': user['id'],
                     'username': user['username'],
@@ -313,6 +319,9 @@ def auth_login():
 
         if school_result['rowCount'] > 0:
             school = school_result['rows'][0]
+            if school.get('disabled'):
+                return jsonify({'success': False, 'message': 'This school has been disabled. Access is not permitted.'}), 403
+            
             user_payload = {
                 'id': school['id'],
                 'name': school['name'],
@@ -334,6 +343,11 @@ def auth_login():
         )
 
         if student_result['rowCount'] > 0:
+            student = student_result['rows'][0]
+            # Check if school is disabled
+            school_check = sql('SELECT disabled FROM schools WHERE id = $1', [student['school_id']])
+            if school_check['rowCount'] > 0 and school_check['rows'][0].get('disabled'):
+                return jsonify({'success': False, 'message': 'This school has been disabled. Access is not permitted.'}), 403
             student = student_result['rows'][0]
             user_payload = {
                 'id': student['id'],
@@ -427,6 +441,128 @@ def superadmin_create_school():
         return jsonify({'success': True, 'school': insert_result['rows'][0]})
     except Exception as e:
         print('Error creating school:', str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+
+
+# Get all teachers of a school
+@app.route('/api/superadmin/schools/<schoolId>/teachers', methods=['GET'])
+@authenticate_token
+@require_super_admin
+def superadmin_get_teachers(schoolId):
+    try:
+        school_check = sql('SELECT id FROM schools WHERE id = $1', [schoolId])
+        if school_check['rowCount'] == 0:
+            return jsonify({'success': False, 'message': 'School not found'}), 404
+        
+        result = sql(
+            """SELECT id, username, name, class_assigned, password
+               FROM users
+               WHERE school_id = $1 AND role = 'teacher'
+               ORDER BY name ASC""",
+            [schoolId]
+        )
+        return jsonify(result['rows'])
+    except Exception as e:
+        print('Error fetching teachers:', str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+
+
+# Get all students of a teacher
+@app.route('/api/superadmin/schools/<schoolId>/teachers/<teacherId>/students', methods=['GET'])
+@authenticate_token
+@require_super_admin
+def superadmin_get_students(schoolId, teacherId):
+    try:
+        teacher_check = sql('SELECT id FROM users WHERE id = $1 AND role = $2', [teacherId, 'teacher'])
+        if teacher_check['rowCount'] == 0:
+            return jsonify({'success': False, 'message': 'Teacher not found'}), 404
+        
+        result = sql(
+            """SELECT id, roll_no, name, password
+               FROM students
+               WHERE school_id = $1 AND teacher_id = $2
+               ORDER BY name ASC""",
+            [schoolId, teacherId]
+        )
+        return jsonify(result['rows'])
+    except Exception as e:
+        print('Error fetching students:', str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+
+
+# Disable/Enable a school
+@app.route('/api/superadmin/schools/<schoolId>/disable', methods=['PUT'])
+@authenticate_token
+@require_super_admin
+def superadmin_disable_school(schoolId):
+    body = request.get_json(silent=True) or {}
+    disabled = body.get('disabled', True)
+    try:
+        result = sql(
+            """UPDATE schools SET disabled = $1 WHERE id = $2 RETURNING *""",
+            [disabled, schoolId]
+        )
+        if result['rowCount'] == 0:
+            return jsonify({'success': False, 'message': 'School not found'}), 404
+        return jsonify({'success': True, 'school': result['rows'][0]})
+    except Exception as e:
+        print('Error disabling school:', str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+
+
+# Reset teacher password
+@app.route('/api/superadmin/schools/<schoolId>/teachers/<teacherId>/reset-password', methods=['PUT'])
+@authenticate_token
+@require_super_admin
+def superadmin_reset_teacher_password(schoolId, teacherId):
+    body = request.get_json(silent=True) or {}
+    new_password = body.get('password')
+    if not new_password:
+        return jsonify({'success': False, 'message': 'New password required'}), 400
+    
+    try:
+        result = sql(
+            """UPDATE users SET password = $1 WHERE id = $2 AND role = $3 RETURNING *""",
+            [new_password, teacherId, 'teacher']
+        )
+        if result['rowCount'] == 0:
+            return jsonify({'success': False, 'message': 'Teacher not found'}), 404
+        return jsonify({'success': True, 'teacher': result['rows'][0]})
+    except Exception as e:
+        print('Error resetting teacher password:', str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+
+
+# Reset student password
+@app.route('/api/superadmin/schools/<schoolId>/teachers/<teacherId>/students/<studentId>/reset-password', methods=['PUT'])
+@authenticate_token
+@require_super_admin
+def superadmin_reset_student_password(schoolId, teacherId, studentId):
+    body = request.get_json(silent=True) or {}
+    new_password = body.get('password')
+    if not new_password:
+        return jsonify({'success': False, 'message': 'New password required'}), 400
+    
+    try:
+        result = sql(
+            """UPDATE students SET password = $1 WHERE id = $2 RETURNING *""",
+            [new_password, studentId]
+        )
+        if result['rowCount'] == 0:
+            return jsonify({'success': False, 'message': 'Student not found'}), 404
+        return jsonify({'success': True, 'student': result['rows'][0]})
+    except Exception as e:
+        print('Error resetting student password:', str(e))
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500

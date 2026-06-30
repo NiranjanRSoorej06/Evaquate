@@ -79,8 +79,15 @@ def init():
                 name VARCHAR(255) NOT NULL,
                 unique_code VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
-                blueprint_json JSONB
+                blueprint_json JSONB,
+                disabled BOOLEAN DEFAULT false
             );
+        """)
+        
+        # Add disabled column if it doesn't exist (migration)
+        cur.execute("""
+            ALTER TABLE schools
+            ADD COLUMN IF NOT EXISTS disabled BOOLEAN DEFAULT false;
         """)
 
         # Users
