@@ -18,19 +18,26 @@ connection_pool = pool.SimpleConnectionPool(
 
 def query(text, params=None):
     """Execute a query and return results similar to node-pg: { rows, rowCount }"""
-    conn = connection_pool.getconn()
+    conn = None
     try:
+        conn = connection_pool.getconn()
         cur = conn.cursor()
         cur.execute(text, params)
         if cur.description:
             columns = [desc[0] for desc in cur.description]
             rows = [dict(zip(columns, row)) for row in cur.fetchall()]
+            conn.commit()
             return {'rows': rows, 'rowCount': len(rows)}
         else:
             conn.commit()
             return {'rows': [], 'rowCount': cur.rowcount}
     except Exception as e:
-        conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except:
+                pass
         raise e
     finally:
-        connection_pool.putconn(conn)
+        if conn:
+            connection_pool.putconn(conn)

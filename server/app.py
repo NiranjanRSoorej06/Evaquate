@@ -304,10 +304,13 @@ def superadmin_get_schools():
             FROM schools s
             ORDER BY s.name ASC
         """)
+        print(f'Fetched {result["rowCount"]} schools from database')
         return jsonify(result['rows'])
     except Exception as e:
-        print('Error fetching schools', e)
-        return jsonify({'success': False, 'message': 'Database error'}), 500
+        print('Error fetching schools:', str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
 
 
 @app.route('/api/superadmin/schools', methods=['POST'])
@@ -329,10 +332,13 @@ def superadmin_create_school():
                VALUES ($1, $2, $3, $4, $5) RETURNING *""",
             [new_school_id, name, unique_code, password, None]
         )
+        print(f'School created successfully: {insert_result["rows"]}')
         return jsonify({'success': True, 'school': insert_result['rows'][0]})
     except Exception as e:
-        print('Error creating school', e)
-        return jsonify({'success': False, 'message': 'Database error'}), 500
+        print('Error creating school:', str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
 
 
 # 3. School Admin APIs

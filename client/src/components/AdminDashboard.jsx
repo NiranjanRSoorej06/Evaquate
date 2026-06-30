@@ -39,7 +39,7 @@ export default function AdminDashboard({ user, onLogout }) {
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/${user.id}/dashboard`);
+      const response = await fetch(`http://localhost:3001/api/admin/${user.id}/dashboard`, { credentials: 'include' });
       const resData = await response.json();
       setData(resData);
     } catch (err) {
@@ -63,6 +63,7 @@ export default function AdminDashboard({ user, onLogout }) {
         response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${isEditingTeacher}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass })
         });
         resData = await response.json();
@@ -70,6 +71,7 @@ export default function AdminDashboard({ user, onLogout }) {
         response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ name: tName, username: tUsername, password: tPassword, class_assigned: tClass })
         });
         resData = await response.json();
@@ -100,7 +102,8 @@ export default function AdminDashboard({ user, onLogout }) {
     if (!window.confirm("Are you sure you want to delete this teacher?")) return;
     try {
       const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${teacherId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       });
       const resData = await response.json();
       if (resData.success) {
@@ -125,6 +128,7 @@ export default function AdminDashboard({ user, onLogout }) {
       formData.append('blueprint', file);
       const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
         method: 'POST',
+        credentials: 'include',
         body: formData
       });
       const resData = await response.json();
@@ -187,6 +191,7 @@ export default function AdminDashboard({ user, onLogout }) {
       await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ blueprint_json: updatedBlueprint })
       });
       setData(prev => ({ ...prev, blueprint_json: updatedBlueprint }));
@@ -470,6 +475,7 @@ export default function AdminDashboard({ user, onLogout }) {
                             fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
                               method: 'PUT',
                               headers: { 'Content-Type': 'application/json' },
+                              credentials: 'include',
                               body: JSON.stringify({ blueprint_json: null })
                             });
                           }

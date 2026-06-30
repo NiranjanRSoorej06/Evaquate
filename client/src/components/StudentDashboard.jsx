@@ -34,7 +34,7 @@ export default function StudentDashboard({ user, onLogout }) {
   const fetchScoreHistory = useCallback(async () => {
     if (!user?.teacher_id || !user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`);
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`, { credentials: 'include' });
       const data = await response.json();
       const me = data.students?.find(s => s.id === user.id);
       if (me) setScoreHistory(me.scores || []);
@@ -63,7 +63,7 @@ export default function StudentDashboard({ user, onLogout }) {
     setQuizCorrectCount(0);
     setFinalPercentage(0);
     try {
-      const response = await fetch(`http://localhost:3001/api/quizzes/${type}`);
+      const response = await fetch(`http://localhost:3001/api/quizzes/${type}`, { credentials: 'include' });
       const data = await response.json();
       setQuizQuestions(data.questions || []);
     } catch (err) {
@@ -97,6 +97,7 @@ export default function StudentDashboard({ user, onLogout }) {
       await fetch('http://localhost:3001/api/student/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           student_id: user.id,
           disaster_type: selectedDisaster,

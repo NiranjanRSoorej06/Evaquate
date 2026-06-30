@@ -27,7 +27,9 @@ export default function SuperAdminDashboard({ user, onLogout }) {
 
   const fetchSchools = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/superadmin/schools');
+      const response = await fetch('http://localhost:3001/api/superadmin/schools', {
+        credentials: 'include'
+      });
       const data = await response.json();
       setSchools(data || []);
     } catch (err) {
@@ -48,6 +50,7 @@ export default function SuperAdminDashboard({ user, onLogout }) {
       const response = await fetch('http://localhost:3001/api/superadmin/schools', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ name, unique_code: code, password })
       });
       const data = await response.json();

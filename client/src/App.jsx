@@ -13,7 +13,9 @@ function App() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/auth/session');
+        const response = await fetch('http://localhost:3001/api/auth/session', {
+          credentials: 'include'
+        });
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.user) {
@@ -46,7 +48,10 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/auth/logout', { method: 'POST' });
+      await fetch('http://localhost:3001/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
