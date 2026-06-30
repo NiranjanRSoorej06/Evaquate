@@ -1,28 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, Edit2, Upload, Compass, Users, UserPlus, Sliders, ShieldCheck, Menu, X } from 'lucide-react';
+import { Trash2, UserPlus, BarChart3, ShieldCheck, Menu, X, Upload, Flame, ShieldAlert, Waves, Mountain } from 'lucide-react';
 
-export default function AdminDashboard({ user, onLogout }) {
-  const [data, setData] = useState(null);
+const disasterOptions = [
+  { id: 'fire', label: 'Fire Safety', description: 'Fire escape and extinguisher basics', icon: Flame, color: '#ef4444' },
+  { id: 'earthquake', label: 'Earthquake Drill', description: 'Drop, cover and hold procedures', icon: ShieldAlert, color: '#f97316' },
+  { id: 'flood', label: 'Flood Survival', description: 'Safe routes and high-ground planning', icon: Waves, color: '#0ea5e9' },
+  { id: 'landslide', label: 'Landslide Safety', description: 'Evacuation and hazard awareness', icon: Mountain, color: '#8b5cf6' }
+];
+
+export default function TeacherDashboard({ user, onLogout }) {
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Responsive & Navigation States
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  
-  const [tName, setTName] = useState('');
-  const [tUsername, setTUsername] = useState('');
-  const [tPassword, setTPassword] = useState('');
-  const [tClass, setTClass] = useState('');
-  const [isEditingTeacher, setIsEditingTeacher] = useState(null);
-  
-  const [file, setFile] = useState(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [selectedCellType, setSelectedCellType] = useState('wall'); 
-  
+
+  const [studentName, setStudentName] = useState('');
+  const [studentRollNo, setStudentRollNo] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [selectedDisaster, setSelectedDisaster] = useState('fire');
+  const [quizFile, setQuizFile] = useState(null);
+  const [uploadingQuiz, setUploadingQuiz] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -35,440 +34,264 @@ export default function AdminDashboard({ user, onLogout }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchTeacherData = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/${user.id}/dashboard`, { credentials: 'include' });
-      const resData = await response.json();
-      setData(resData);
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/students`, { credentials: 'include' });
+      const data = await response.json();
+      if (data?.students) setStudents(data.students);
     } catch (err) {
-      console.error("Error fetching dashboard data", err);
+      console.error('Error fetching teacher data', err);
+      setErrorMsg('Unable to load student data right now.');
     } finally {
       setLoading(false);
     }
   }, [user?.id]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchTeacherData();
+  }, [fetchTeacherData]);
 
-  const handleCreateTeacher = async (e) => {
+  const getLatestScore = (student, disasterType, activityType) => {
+    const score = (student.scores || []).find(sc => sc.disaster_type === disasterType && sc.activity_type === activityType);
+    return score ? score.score : null;
+  };
+
+  const handleAddStudent = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      let response, resData;
-      if (isEditingTeacher) {
-        response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${isEditingTeacher}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass })
-        });
-        resData = await response.json();
+      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: studentName, roll_no: studentRollNo, school_id: user?.school_id })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg('Student added successfully.');
+        setStudentName('');
+        setStudentRollNo('');
+        fetchTeacherData();
       } else {
-        response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ name: tName, username: tUsername, password: tPassword, class_assigned: tClass })
-        });
-        resData = await response.json();
-      }
-
-      if (resData.success) {
-        setSuccessMsg(isEditingTeacher ? 'Teacher updated successfully.' : 'Teacher account created successfully.');
-        setTName(''); setTUsername(''); setTPassword(''); setTClass('');
-        setIsEditingTeacher(null);
-        fetchDashboardData();
-      } else {
-        setErrorMsg(resData.message || 'Action failed.');
+        setErrorMsg(data.message || 'Failed to add student.');
       }
     } catch (err) {
-      setErrorMsg('Failed to reach backend.');
+      setErrorMsg('Could not connect to the server.');
     }
   };
 
-  const handleEditTeacherClick = (teacher) => {
-    setIsEditingTeacher(teacher.teacher_id);
-    setTName(teacher.teacher_name);
-    setTUsername(teacher.teacher_username);
-    setTPassword(''); 
-    setTClass(teacher.class_assigned);
-  };
-
-  const handleDeleteTeacher = async (teacherId) => {
-    if (!window.confirm("Are you sure you want to delete this teacher?")) return;
+  const handleDeleteStudent = async (studentId) => {
+    if (!window.confirm('Remove this student from your class?')) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${teacherId}`, {
+      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/students/${studentId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      const resData = await response.json();
-      if (resData.success) {
-        setSuccessMsg('Teacher account deleted.');
-        fetchDashboardData();
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg('Student removed.');
+        fetchTeacherData();
       }
     } catch (err) {
-      console.error(err);
+      setErrorMsg('Unable to remove student right now.');
     }
   };
 
-  const handleFileUpload = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+  const handleQuizUpload = async (e) => {
+    e.preventDefault();
+    if (!quizFile) {
+      setErrorMsg('Choose a CSV file before uploading.');
+      return;
     }
-  };
 
-  const finalizeScan = useCallback(async () => {
-    if (!file) return;
+    setUploadingQuiz(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
     try {
       const formData = new FormData();
-      formData.append('blueprint', file);
-      const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+      formData.append('quiz_file', quizFile);
+      formData.append('disaster_type', selectedDisaster);
+
+      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/quizzes/upload`, {
         method: 'POST',
         credentials: 'include',
         body: formData
       });
-      const resData = await response.json();
-      if (resData.success) {
-        setIsScanning(false);
-        setFile(null);
-        setSuccessMsg('AI Floorplan scanning complete.');
-        fetchDashboardData();
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg(`Quiz uploaded for ${selectedDisaster}. Students can now access it.`);
+        setQuizFile(null);
+      } else {
+        setErrorMsg(data.message || 'Quiz upload failed.');
       }
     } catch (err) {
-      setIsScanning(false);
-      setErrorMsg('Scan uploaded but mapping failed.');
-    }
-  }, [file, user?.id, fetchDashboardData]);
-
-  const startAIScan = () => {
-    if (!file) return;
-    setIsScanning(true);
-    setScanProgress(0);
-    const interval = setInterval(() => {
-      setScanProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          finalizeScan();
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
-  };
-
-  const handleCellClick = async (rIndex, cIndex) => {
-    if (!data?.blueprint_json) return;
-    const updatedBlueprint = JSON.parse(JSON.stringify(data.blueprint_json));
-    let val = 0;
-    if (selectedCellType === 'wall') val = 1;
-    else if (selectedCellType === 'extinguisher') val = 2;
-    else if (selectedCellType === 'door') val = 3;
-    else if (selectedCellType === 'assembly') val = 5;
-
-    updatedBlueprint.grid[rIndex][cIndex] = val;
-    const extinguishers = [];
-    const doors = [];
-    let assembly_zone = updatedBlueprint.elements?.assembly_zone;
-
-    updatedBlueprint.grid.forEach((row, r) => {
-      row.forEach((cell, c) => {
-        if (cell === 2) extinguishers.push({ x: c, y: r });
-        if (cell === 3) doors.push({ x: c, y: r });
-        if (cell === 5) assembly_zone = { x: c, y: r };
-      });
-    });
-
-    updatedBlueprint.elements = updatedBlueprint.elements || {};
-    updatedBlueprint.elements.extinguishers = extinguishers;
-    updatedBlueprint.elements.doors = doors;
-    updatedBlueprint.elements.assembly_zone = assembly_zone;
-
-    try {
-      await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ blueprint_json: updatedBlueprint })
-      });
-      setData(prev => ({ ...prev, blueprint_json: updatedBlueprint }));
-    } catch (err) {
-      console.error("Error saving updated grid", err);
+      setErrorMsg('Could not upload the quiz file.');
+    } finally {
+      setUploadingQuiz(false);
     }
   };
 
-  if (loading || !data) return <div style={{ padding: '60px', textAlign: 'center', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', color: '#0284c7', fontWeight: '500' }}>Preparing dashboard workspace...</div>;
+  if (loading) {
+    return <div style={{ padding: '60px', textAlign: 'center', color: '#0284c7', fontWeight: '600' }}>Preparing your teacher dashboard...</div>;
+  }
 
   return (
-    <div style={{ display: 'flex', width: '100%', minHeight: '100vh', margin: 0, padding: 0, fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', backgroundColor: '#f0f9ff', color: '#1e293b', boxSizing: 'border-box' }}>
-      
-      <style dangerouslySetInnerHTML={{ __html: `
+    <div style={{ display: 'flex', width: '100%', minHeight: '100vh', backgroundColor: '#f0f9ff', color: '#0f172a', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>
+      <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-        
-        .panel-card { background: #ffffff; border: 1px solid #e0f2fe; border-radius: 16px; padding: 28px; box-shadow: 0 4px 20px rgba(2, 132, 199, 0.03); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .panel-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(2, 132, 199, 0.06); }
-        
-        .btn-action { background: #0284c7; color: #ffffff; border: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15); }
-        .btn-action:hover { background: #0369a1; transform: scale(1.02); box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25); }
-        
-        .btn-secondary-link { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; font-size: 14px; text-align: center; }
-        .btn-secondary-link:hover { background: #e0f2fe; color: #0369a1; border-color: #0284c7; }
-        
-        .btn-danger-outline { background: transparent; color: #b91c1c; border: 1px solid #fee2e2; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-        .btn-danger-outline:hover { background: #fef2f2; border-color: #fca5a5; }
-        
-        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
-        @media (max-width: 1200px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 640px) { .metrics-grid { grid-template-columns: 1fr; gap: 16px; } }
-
-        .metric-block { border-left: 5px solid #0284c7; background: #fff; }
-        .metric-num { font-size: 42px; font-weight: 700; color: #0284c7; margin: 6px 0; display: block; }
-        
-        .form-control { width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; margin-top: 8px; font-size: 14px; background: #fff; box-sizing: border-box; transition: border 0.2s; font-family: inherit; }
-        .form-control:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.1); outline: none; }
-        .label-text { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
-        
-        .map-grid-preview { display: grid; gap: 8px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .map-cell { aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
-        .map-cell:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.08); z-index: 2; }
-        .map-cell-wall { background: #334155; }
-        .map-cell-empty { background: #ffffff; border: 1px dashed #cbd5e1; }
-        .map-cell-extinguisher { background: #ffe4e6; border: 1px solid #fecaca; }
-        .map-cell-door { background: #fef9c3; border: 1px solid #fef08a; }
-        .map-cell-assembly { background: #dcfce7; border: 1px solid #bbf7d0; }
-        
-        .icon-btn { background: #f8fafc; border: 1px solid #e2e8f0; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; transition: all 0.15s; }
-        .icon-btn:hover { color: #0284c7; border-color: #0284c7; background: #ffffff; }
-        .icon-btn-del:hover { color: #b91c1c; border-color: #fca5a5; background: #fef2f2; }
-        
-        .table-responsive-scroll { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid #f1f5f9; }
-        table { width: 100%; border-collapse: collapse; min-width: 650px; }
-        table th { text-align: left; padding: 16px; color: #475569; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #e2e8f0; background: #f1f5f9; }
-        table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; background: #ffffff; }
-        table tr:last-child td { border-bottom: none; }
-        table tr:hover td { background-color: #f8fafc; }
-        
-        .nav-button { background: transparent; border: none; color: #e0f2fe; padding: 12px 16px; border-radius: 10px; font-weight: 500; display: flex; align-items: center; gap: 12px; font-size: 14px; width: 100%; text-align: left; cursor: pointer; transition: all 0.2s; }
-        .nav-button:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-        .nav-button-active { background: rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-weight: 600; }
-      ` }} />
+        .panel-card { background: #ffffff; border: 1px solid #e0f2fe; border-radius: 16px; padding: 24px; box-shadow: 0 4px 18px rgba(2, 132, 199, 0.04); }
+        .btn-action { background: #0284c7; color: #fff; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+        .btn-action:hover { background: #0369a1; }
+        .btn-danger-outline { background: transparent; color: #b91c1c; border: 1px solid #fee2e2; padding: 10px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+        .btn-danger-outline:hover { background: #fef2f2; }
+        .form-control { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; margin-top: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+        .form-control:focus { border-color: #0284c7; outline: none; box-shadow: 0 0 0 3px rgba(2,132,199,0.08); }
+        .label-text { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+        .nav-button { background: transparent; border: none; color: #e0f2fe; padding: 12px 14px; border-radius: 10px; font-weight: 500; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer; }
+        .nav-button:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .nav-button-active { background: rgba(255,255,255,0.15) !important; color: #fff !important; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 10px; color: #475569; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+      `}</style>
 
       {isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0284c7', color: '#ffffff', padding: '0 20px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999, height: '60px', boxShadow: '0 2px 8px rgba(2, 132, 199, 0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0284c7', color: '#fff', padding: '0 20px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 999, height: '60px', boxShadow: '0 2px 8px rgba(2,132,199,0.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <ShieldCheck size={22} color="#ffffff" />
-            <span style={{ fontWeight: '700', fontSize: '15px' }}>Admin Workspace</span>
+            <ShieldCheck size={20} color="#fff" />
+            <span style={{ fontWeight: '700' }}>Teacher Dashboard</span>
           </div>
-          <button type="button" onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '4px' }}>
+          <button type="button" onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       )}
 
-      {isMobile && isSidebarOpen && (
-        <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.3)', backdropFilter: 'blur(1px)', zIndex: 1000 }} />
-      )}
+      {isMobile && isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.3)', zIndex: 998 }} />}
 
-      <aside style={{ 
-        width: '280px', 
-        backgroundColor: '#0284c7', 
-        padding: '32px 24px', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '40px', 
-        boxSizing: 'border-box', 
-        color: '#fff',
-        transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        zIndex: 1001,
-        ...(isMobile ? {
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)'
-        } : {})
-      }}>
+      <aside style={{ width: '280px', backgroundColor: '#0284c7', color: '#fff', padding: '32px 20px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '28px', transition: 'transform 0.25s ease', zIndex: 1000, ...(isMobile ? { position: 'fixed', left: 0, top: 0, bottom: 0, transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)' } : {}) }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <ShieldCheck size={22} color="#0284c7" />
           </div>
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Dashboard</h2>
-            <span style={{ fontSize: '12px', color: '#e0f2fe' }}>Admin Control Center</span>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Teacher Workspace</h2>
+            <span style={{ fontSize: '12px', color: '#e0f2fe' }}>Class management</span>
           </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button type="button" onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }} className={`nav-button ${activeTab === 'overview' ? 'nav-button-active' : ''}`}>
-            <Sliders size={18} /> Overview Console
+            <BarChart3 size={18} /> Overview Console
           </button>
-          <button type="button" onClick={() => { setActiveTab('performance'); setIsSidebarOpen(false); }} className={`nav-button ${activeTab === 'performance' ? 'nav-button-active' : ''}`}>
-            <Users size={18} /> Performance Registry
+          <button type="button" onClick={() => { setActiveTab('quiz'); setIsSidebarOpen(false); }} className={`nav-button ${activeTab === 'quiz' ? 'nav-button-active' : ''}`}>
+            <Upload size={18} /> Add Quiz
           </button>
         </nav>
 
-        <button type="button" onClick={onLogout} style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', padding: '12px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>
+        <button type="button" onClick={onLogout} style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '12px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>
           Sign Out
         </button>
       </aside>
 
-      <main style={{ flex: 1, padding: isMobile ? '20px' : '40px', paddingTop: isMobile ? '84px' : '40px', boxSizing: 'border-box', overflowY: 'auto', width: '100%' }}>
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
-          <div>
-            <h1 style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-              {activeTab === 'overview' ? 'System Infrastructure Overview' : 'Institutional Performance Registers'}
-            </h1>
-            <p style={{ color: '#64748b', margin: '6px 0 0 0', fontSize: '15px' }}>Welcome back, Workspace Coordinator</p>
-          </div>
+      <main style={{ flex: 1, padding: isMobile ? '24px 20px 20px' : '40px', paddingTop: isMobile ? '84px' : '40px', boxSizing: 'border-box', overflowY: 'auto' }}>
+        <header style={{ marginBottom: '24px' }}>
+          <h1 style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '700', margin: 0 }}>Teacher Control Center</h1>
+          <p style={{ color: '#64748b', margin: '6px 0 0 0' }}>Welcome back, {user?.name || 'Teacher'} • {user?.class_assigned || 'Classroom'}</p>
         </header>
 
-        {successMsg && <div style={{ padding: '16px 20px', background: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: '12px', color: '#166534', marginBottom: '24px' }}>{successMsg}</div>}
-        {errorMsg && <div style={{ padding: '16px 20px', background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '12px', color: '#991b1b', marginBottom: '24px' }}>{errorMsg}</div>}
+        {successMsg && <div style={{ padding: '14px 16px', background: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: '12px', color: '#166534', marginBottom: '20px' }}>{successMsg}</div>}
+        {errorMsg && <div style={{ padding: '14px 16px', background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '12px', color: '#991b1b', marginBottom: '20px' }}>{errorMsg}</div>}
 
         {activeTab === 'overview' && (
           <>
-            <div className="metrics-grid">
-              <div className="panel-card metric-block">
-                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Total Rooms</span>
-                <span className="metric-num">{data?.blueprint_json?.rooms?.length || 4}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+              <div className="panel-card">
+                <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Students</div>
+                <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>{students.length}</div>
               </div>
-              <div className="panel-card metric-block">
-                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Configured Staff</span>
-                <span className="metric-num">{data?.teachers?.length || 2}</span>
+              <div className="panel-card">
+                <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Quiz Types</div>
+                <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>4</div>
               </div>
-              <div className="panel-card metric-block">
-                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Enrolled Students</span>
-                <span className="metric-num">{data?.teachers ? data.teachers.reduce((acc, t) => acc + (t.students?.length || 0), 0) : 3}</span>
-              </div>
-              <div className="panel-card metric-block">
-                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Blueprint Node</span>
-                <span className="metric-num">Active</span>
+              <div className="panel-card">
+                <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Latest Drill</div>
+                <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>{students.length ? `${students[0]?.scores?.find(sc => sc.activity_type === 'drill')?.score || 0} pts` : '0 pts'}</div>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr', gap: '32px', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.1fr', gap: '24px' }}>
               <div className="panel-card">
-                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><Compass size={20} color="#0284c7" /> Blueprint Layout Engine</h3>
-                <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 24px 0' }}>Select a design asset to overlay positioning nodes onto your mapped matrix.</p>
-
-                {!data?.blueprint_json ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', border: '2px dashed #bae6fd', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
-                    <Upload size={36} style={{ color: '#38bdf8', marginBottom: '16px' }} />
-                    <input type="file" accept="image/*" onChange={handleFileUpload} id="blueprint-file" style={{ display: 'none' }} />
-                    <label htmlFor="blueprint-file" className="btn-secondary-link" style={{ cursor: 'pointer', padding: '12px 24px' }}>Locate Source File</label>
-                    {file && <button type="button" onClick={startAIScan} className="btn-action" style={{ marginTop: '16px', width: '100%' }}>Initialize Grid Parser</button>}
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '24px' }}>
-                      {[
-                        { id: 'wall', label: 'Wall Asset', color: '#334155' },
-                        { id: 'empty', label: 'Walkway Unit', color: '#ffffff' },
-                        { id: 'door', label: 'Access Point', color: '#fef9c3' },
-                        { id: 'extinguisher', label: 'Extinguisher', color: '#ffe4e6' },
-                        { id: 'assembly', label: 'Assembly Zone', color: '#dcfce7' }
-                      ].map(item => (
-                        <button key={item.id} type="button" onClick={() => setSelectedCellType(item.id)} style={{ background: selectedCellType === item.id ? '#0284c7' : '#ffffff', border: `1px solid ${selectedCellType === item.id ? '#0284c7' : '#cbd5e1'}`, padding: '8px 14px', borderRadius: '8px', color: selectedCellType === item.id ? '#ffffff' : '#334155', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
-                          <span style={{ width: '12px', height: '12px', background: item.color, borderRadius: '3px', border: '1px solid #cbd5e1' }}></span>
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div style={{ overflowX: 'auto', width: '100%', marginBottom: '16px' }}>
-                      <div className="map-grid-preview" style={{ gridTemplateColumns: `repeat(${data.blueprint_json.width || 1}, minmax(40px, 1fr))`, minWidth: '460px' }}>
-                        {data.blueprint_json.grid?.map((row, rIdx) => 
-                          row.map((cell, cIdx) => {
-                            let cellClass = 'map-cell-empty'; let displayChar = '';
-                            if (cell === 1) cellClass = 'map-cell-wall';
-                            if (cell === 2) { cellClass = 'map-cell-extinguisher'; displayChar = '🧯'; }
-                            if (cell === 3) { cellClass = 'map-cell-door'; displayChar = '🚪'; }
-                            if (cell === 5) { cellClass = 'map-cell-assembly'; displayChar = '🚩'; }
-                            return <div key={`${rIdx}-${cIdx}`} onClick={() => handleCellClick(rIdx, cIdx)} className={`map-cell ${cellClass}`}>{displayChar}</div>;
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    <button type="button" onClick={() => { if (window.confirm("Purge spatial records?")) { setData(prev => ({ ...prev, blueprint_json: null })); fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ blueprint_json: null }) }); } }} className="btn-danger-outline" style={{ width: isMobile ? '100%' : 'auto' }}>Wipe Layout</button>
-                  </div>
-                )}
+                <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><UserPlus size={20} color="#0284c7" /> Add Student</h3>
+                <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>Only student enrollment is managed here. Quiz creation is handled in the dedicated tab.</p>
+                <form onSubmit={handleAddStudent}>
+                  <div style={{ marginBottom: '16px' }}><label className="label-text">Student Name</label><input type="text" className="form-control" value={studentName} onChange={e => setStudentName(e.target.value)} required /></div>
+                  <div style={{ marginBottom: '20px' }}><label className="label-text">Roll Number</label><input type="text" className="form-control" value={studentRollNo} onChange={e => setStudentRollNo(e.target.value)} required /></div>
+                  <button type="submit" className="btn-action" style={{ width: '100%' }}>Add Student</button>
+                </form>
               </div>
 
               <div className="panel-card">
-                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><UserPlus size={20} color="#0284c7" /> Staff Profile Onboarding</h3>
-                <form onSubmit={handleCreateTeacher}>
-                  <div style={{ marginBottom: '18px' }}><label className="label-text">Full Name</label><input type="text" className="form-control" value={tName} onChange={e => setTName(e.target.value)} required /></div>
-                  {!isEditingTeacher && <div style={{ marginBottom: '18px' }}><label className="label-text">Access Tag (ID)</label><input type="text" className="form-control" value={tUsername} onChange={e => setTUsername(e.target.value)} required /></div>}
-                  <div style={{ marginBottom: '18px' }}><label className="label-text">Security Key</label><input type="password" className="form-control" value={tPassword} onChange={e => setTPassword(e.target.value)} required={!isEditingTeacher} /></div>
-                  <div style={{ marginBottom: '28px' }}><label className="label-text">Assignment Scope</label><input type="text" className="form-control" value={tClass} onChange={e => setTClass(e.target.value)} required /></div>
-                  <button type="submit" className="btn-action" style={{ width: '100%' }}>{isEditingTeacher ? 'Commit Updates' : 'Authorize Creation'}</button>
-                </form>
+                <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><BarChart3 size={20} color="#0284c7" /> Student Statistics</h3>
+                <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>Review performance for each student in your class.</p>
+                <div style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr><th>Roll</th><th>Name</th><th>Fire Drill</th><th>Quiz</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      {students.length === 0 ? (
+                        <tr><td colSpan="5" style={{ textAlign: 'center', color: '#64748b', padding: '20px 0' }}>No students yet.</td></tr>
+                      ) : students.map(student => (
+                        <tr key={student.id}>
+                          <td>{student.roll_no}</td>
+                          <td>{student.name}</td>
+                          <td>{getLatestScore(student, 'fire', 'drill') != null ? `${getLatestScore(student, 'fire', 'drill')} pts` : '?'}</td>
+                          <td>{getLatestScore(student, 'earthquake', 'quiz') != null ? `${getLatestScore(student, 'earthquake', 'quiz')}%` : '?'}</td>
+                          <td><button type="button" onClick={() => handleDeleteStudent(student.id)} className="btn-danger-outline">Remove</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </>
         )}
 
-        {activeTab === 'performance' && (
-          <div className="panel-card" style={{ padding: isMobile ? '16px' : '28px' }}>
-            {!data?.teachers || data.teachers.length === 0 ? (
-              <p style={{ color: '#64748b', textAlign: 'center', padding: '32px 0' }}>No profile accounts registered.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                {data.teachers.map(teacher => {
-                  const drillScores = teacher.students ? teacher.students.flatMap(s => (s.scores || []).filter(sc => sc.activity_type === 'drill')) : [];
-                  const avgEvacTime = drillScores.length > 0 ? Math.round(drillScores.reduce((acc, s) => acc + s.duration_seconds, 0) / drillScores.length) : null;
+        {activeTab === 'quiz' && (
+          <div className="panel-card" style={{ maxWidth: '900px' }}>
+            <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><Upload size={20} color="#0284c7" /> Add Quiz</h3>
+            <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>Choose a disaster module and upload a CSV file of quiz questions for your students.</p>
 
-                  return (
-                    <div key={teacher.teacher_id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#ffffff' }}>
-                      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '16px', padding: '18px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <div>
-                          <h4 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>{teacher.teacher_name}</h4>
-                          <span style={{ fontSize: '13px', color: '#64748b' }}>Tag: {teacher.teacher_username} &bull; Target Room: {teacher.class_assigned || 'None'}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: isMobile ? '100%' : 'auto', justifyContent: 'space-between' }}>
-                          {avgEvacTime !== null && <div style={{ background: '#f0f9ff', padding: '6px 14px', borderRadius: '8px', border: '1px solid #bae6fd', color: '#0369a1', fontWeight: '700' }}>{avgEvacTime}s Avg</div>}
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button type="button" onClick={() => { handleEditTeacherClick(teacher); setActiveTab('overview'); }} className="icon-btn"><Edit2 size={14} /></button>
-                            <button type="button" onClick={() => handleDeleteTeacher(teacher.teacher_id)} className="icon-btn icon-btn-del"><Trash2 size={14} /></button>
-                          </div>
-                        </div>
-                      </div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '16px', marginBottom: '22px' }}>
+              {disasterOptions.map(option => (
+                <button key={option.id} type="button" onClick={() => setSelectedDisaster(option.id)} style={{ textAlign: 'left', borderRadius: '14px', border: selectedDisaster === option.id ? '2px solid #0284c7' : '1px solid #e2e8f0', background: selectedDisaster === option.id ? '#f0f9ff' : '#fff', padding: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `${option.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <option.icon size={20} color={option.color} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: '700', color: '#0f172a' }}>{option.label}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>{option.description}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
 
-                      {teacher.students && teacher.students.length > 0 ? (
-                        <div className="table-responsive-scroll">
-                          <table>
-                            <thead>
-                              <tr><th>Roll No</th><th>Identity</th><th>Drill Response</th><th>Seismic</th><th>Hydrological</th><th>Erosion</th></tr>
-                            </thead>
-                            <tbody>
-                              {teacher.students.map(student => {
-                                const studentScores = student.scores || [];
-                                const fireDrill = studentScores.find(sc => sc.disaster_type === 'fire' && sc.activity_type === 'drill');
-                                const eqQuiz = studentScores.find(sc => sc.disaster_type === 'earthquake' && sc.activity_type === 'quiz');
-                                return (
-                                  <tr key={student.id || student.roll_no}>
-                                    <td>{student.roll_no}</td>
-                                    <td>{student.name}</td>
-                                    <td style={{ color: '#0284c7', fontWeight: '700' }}>{fireDrill ? `${fireDrill.score} pts` : '—'}</td>
-                                    <td>{eqQuiz ? `${eqQuiz.score}%` : '—'}</td>
-                                    <td>—</td><td>—</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <div style={{ color: '#64748b', padding: '20px 24px', fontStyle: 'italic' }}>No linked records.</div>
-                      )}
-                    </div>
-                  );
-                })}
+            <form onSubmit={handleQuizUpload}>
+              <div style={{ marginBottom: '16px' }}>
+                <label className="label-text">Upload CSV File</label>
+                <input type="file" accept=".csv" onChange={e => setQuizFile(e.target.files?.[0] || null)} className="form-control" style={{ padding: '10px 12px' }} required />
               </div>
-            )}
+              <div style={{ background: '#f8fafc', border: '1px dashed #bae6fd', borderRadius: '12px', padding: '14px 16px', color: '#0369a1', fontSize: '13px', marginBottom: '18px' }}>
+                <strong>CSV format:</strong> question, option1, option2, option3, option4, answer
+              </div>
+              <button type="submit" className="btn-action" disabled={uploadingQuiz} style={{ width: '100%' }}>{uploadingQuiz ? 'Uploading quiz...' : 'Upload Quiz'}</button>
+            </form>
           </div>
         )}
       </main>

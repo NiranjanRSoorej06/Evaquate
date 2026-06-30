@@ -118,10 +118,27 @@ def init():
         # Quizzes
         cur.execute("""
             CREATE TABLE IF NOT EXISTS quizzes (
-                disaster_type VARCHAR(50) PRIMARY KEY,
-                questions JSONB NOT NULL
+                id SERIAL PRIMARY KEY,
+                disaster_type VARCHAR(50) NOT NULL,
+                question TEXT,
+                option_a TEXT,
+                option_b TEXT,
+                option_c TEXT,
+                option_d TEXT,
+                correct_answer TEXT,
+                questions JSONB NOT NULL DEFAULT '[]'::jsonb
             );
         """)
+
+        cur.execute("ALTER TABLE quizzes DROP CONSTRAINT IF EXISTS quizzes_disaster_type_key;")
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS question TEXT;")
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_a TEXT;")
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_b TEXT;")
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_c TEXT;")
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_d TEXT;")
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS correct_answer TEXT;")
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS questions JSONB;")
+        cur.execute("UPDATE quizzes SET questions = '[]'::jsonb WHERE questions IS NULL;")
 
         # Scores
         cur.execute("""

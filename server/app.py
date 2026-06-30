@@ -2,6 +2,9 @@ import os
 import json
 import time
 import secrets
+import csv
+import io
+import re
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 
@@ -154,6 +157,94 @@ def require_student_of_school(f):
 
 
 # --- Helper ---
+
+def parse_quiz_csv(file_storage):
+    content = file_storage.read().decode('utf-8-sig')
+    if not content.strip():
+        raise ValueError('CSV file is empty.')
+
+    reader = csv.DictReader(io.StringIO(content))
+    if not reader.fieldnames:
+        raise ValueError('CSV file must contain headers.')
+
+    def normalize_header(value):
+        return re.sub(r'[^a-z0-9]+', '', (value or '').strip().lower())
+
+    def find_value(row, aliases):
+        for key in row.keys():
+            if normalize_header(key) in aliases:
+                value = str(row.get(key, '') or '').strip()
+                if value:
+                    return value
+        return None
+
+    def find_option(row, label):
+        for key in row.keys():
+            normalized = normalize_header(key)
+            if normalized in label:
+                value = str(row.get(key, '') or '').strip()
+                if value:
+                    return value
+        return None
+
+    questions = []
+    for row in reader:
+        question = find_value(row, {'question', 'prompt', 'q', 'questiontext'})
+        if not question:
+            continue
+
+        option_values = []
+        for option_key in [
+            {'optiona', 'option1', 'optionone'},
+            {'optionb', 'option2', 'optiontwo'},
+            {'optionc', 'option3', 'optionthree'},
+            {'optiond', 'option4', 'optionfour'},
+        ]:
+            option_value = find_option(row, option_key)
+            if option_value:
+                option_values.append(option_value)
+
+        if len(option_values) < 2:
+            continue
+
+        answer = 0
+        answer_value = find_value(row, {'answer', 'correctanswer', 'correct', 'correctoption', 'correctansweroption'})
+        if answer_value is not None:
+            normalized = answer_value.strip().lower()
+            if normalized in {'a', 'b', 'c', 'd'}:
+                answer = ord(normalized) - ord('a')
+            elif normalized in {'optiona', 'optionb', 'optionc', 'optiond'}:
+                answer = ord(normalized[-1]) - ord('a')
+            elif normalized.startswith('option '):
+                letter = normalized.split()[-1][0].lower()
+                if letter in 'abcd':
+                    answer = ord(letter) - ord('a')
+            elif normalized.isdigit():
+                idx = int(normalized) - 1
+                if 0 <= idx < len(option_values):
+                    answer = idx
+            else:
+                for idx, option in enumerate(option_values):
+                    if normalized == option.strip().lower():
+                        answer = idx
+                        break
+
+        question_payload = {
+            'question': question,
+            'options': option_values,
+            'answer': answer,
+            'option_a': option_values[0] if len(option_values) > 0 else '',
+            'option_b': option_values[1] if len(option_values) > 1 else '',
+            'option_c': option_values[2] if len(option_values) > 2 else '',
+            'option_d': option_values[3] if len(option_values) > 3 else '',
+            'correct_answer': answer_value or '',
+        }
+        questions.append(question_payload)
+
+    if not questions:
+        raise ValueError('No valid quiz questions were found in the CSV file.')
+    return questions
+
 
 def sql(query_str, params=None):
     """Wrapper around db.query that converts $N placeholders to %s for psycopg2.
@@ -692,6 +783,50 @@ def teacher_delete_student(teacherId, studentId):
         return jsonify({'success': False, 'message': 'Database error'}), 500
 
 
+# Upload quiz CSV for a disaster type
+
+@app.route('/api/teacher/<teacherId>/quizzes/upload', methods=['POST'])
+@authenticate_token
+@require_teacher_or_student_of_teacher
+def teacher_upload_quiz(teacherId):
+    uploaded_file = request.files.get('quiz_file')
+    disaster_type = (request.form.get('disaster_type') or '').strip().lower()
+
+    if not uploaded_file or not disaster_type:
+        return jsonify({'success': False, 'message': 'A CSV file and disaster type are required.'}), 400
+
+    try:
+        questions = parse_quiz_csv(uploaded_file)
+        if not questions:
+            raise ValueError('No valid quiz questions were found in the CSV file.')
+
+        sql('DELETE FROM quizzes WHERE disaster_type = $1', [disaster_type])
+
+        for question_payload in questions:
+            sql(
+                """INSERT INTO quizzes (
+                    disaster_type, question, option_a, option_b, option_c, option_d, correct_answer, questions
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)""",
+                [
+                    disaster_type,
+                    question_payload.get('question', ''),
+                    question_payload.get('option_a', ''),
+                    question_payload.get('option_b', ''),
+                    question_payload.get('option_c', ''),
+                    question_payload.get('option_d', ''),
+                    question_payload.get('correct_answer', ''),
+                    json.dumps(questions)
+                ]
+            )
+
+        return jsonify({'success': True, 'disaster_type': disaster_type, 'questions': questions})
+    except ValueError as value_error:
+        return jsonify({'success': False, 'message': str(value_error)}), 400
+    except Exception as e:
+        print('Error uploading quiz', e)
+        return jsonify({'success': False, 'message': 'Database error'}), 500
+
+
 # 5. Student & Gameplay APIs
 # Get Quiz
 
@@ -699,9 +834,11 @@ def teacher_delete_student(teacherId, studentId):
 @authenticate_token
 def get_quiz(disasterType):
     try:
-        quiz_res = sql('SELECT * FROM quizzes WHERE disaster_type = $1', [disasterType])
+        quiz_res = sql('SELECT * FROM quizzes WHERE disaster_type = $1 ORDER BY id', [disasterType])
         if quiz_res['rowCount'] > 0:
-            return jsonify(quiz_res['rows'][0])
+            first_row = quiz_res['rows'][0]
+            questions = first_row.get('questions') or []
+            return jsonify({'disaster_type': disasterType, 'questions': questions})
         return jsonify({'message': 'Quiz not found'}), 404
     except Exception as e:
         print('Error getting quiz', e)
