@@ -80,7 +80,7 @@ export default function DrillGame({ schoolId, disasterType, onFinish }) {
     setGameStatus('loading');
     setErrorMsg('');
     try {
-      const response = await fetch(`http://localhost:3001/api/student/${schoolId}/map`);
+      const response = await fetch(`http://localhost:3001/api/student/${schoolId}/map`, { credentials: 'include' });
       if (response.status === 404) {
         setErrorMsg('Your school map layout has not been uploaded by the School Admin yet. Contact them to set it up.');
         setGameStatus('idle');
