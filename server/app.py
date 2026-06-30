@@ -10,23 +10,15 @@ from functools import wraps
 
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
-from dotenv import load_dotenv
-import jwt
-import db
 
-load_dotenv()
+from config import PORT, UPLOAD_DIR
+
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:5173', 'http://localhost:5174'], supports_credentials=True)
 
-PORT = int(os.environ.get('PORT', 3001))
-JWT_SECRET = os.environ.get('JWT_SECRET', 'super_secret_jwt_key_123')
-NODE_ENV = os.environ.get('NODE_ENV', 'development')
-IS_PRODUCTION = NODE_ENV == 'production'
-
-# Ensure uploads directory exists
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+    # ── Ensure uploads directory exists ─────────────────────────────────
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # --- SESSION MANAGEMENT ---
 sessions = {}  # sessionId -> { user: dict, expiresAt: float }
