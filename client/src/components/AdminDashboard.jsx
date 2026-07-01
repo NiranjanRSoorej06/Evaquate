@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, Edit2, Upload, Compass, Users, UserPlus, Sliders, ShieldCheck, Menu, X } from 'lucide-react';
+import { Trash2, Edit2, Upload, Compass, Users, UserPlus, Sliders, ShieldCheck, Menu, X, Eye, EyeOff } from 'lucide-react';
 
 export default function AdminDashboard({ user, onLogout }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Responsive & Navigation States
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'performance', 'onboarding'
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   
+  // Instructor Form States
   const [tName, setTName] = useState('');
   const [tUsername, setTUsername] = useState('');
   const [tPassword, setTPassword] = useState('');
   const [tClass, setTClass] = useState('');
   const [isEditingTeacher, setIsEditingTeacher] = useState(null);
+  const [showTPassword, setShowTPassword] = useState(false); 
   
   const [file, setFile] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -29,7 +31,7 @@ export default function AdminDashboard({ user, onLogout }) {
     const handleResize = () => {
       const mobileMode = window.innerWidth <= 1024;
       setIsMobile(mobileMode);
-      if (!mobileMode) setIsSidebarOpen(false); // Clean up state if pulling window back to desktop size
+      if (!mobileMode) setIsSidebarOpen(false);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -57,6 +59,7 @@ export default function AdminDashboard({ user, onLogout }) {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
+
     try {
       let response, resData;
       if (isEditingTeacher) {
@@ -81,7 +84,9 @@ export default function AdminDashboard({ user, onLogout }) {
         setSuccessMsg(isEditingTeacher ? 'Teacher updated successfully.' : 'Teacher account created successfully.');
         setTName(''); setTUsername(''); setTPassword(''); setTClass('');
         setIsEditingTeacher(null);
+        setShowTPassword(false);
         fetchDashboardData();
+        setActiveTab('performance'); 
       } else {
         setErrorMsg(resData.message || 'Action failed.');
       }
@@ -96,6 +101,8 @@ export default function AdminDashboard({ user, onLogout }) {
     setTUsername(teacher.teacher_username);
     setTPassword(''); 
     setTClass(teacher.class_assigned);
+    setShowTPassword(false);
+    setActiveTab('onboarding'); 
   };
 
   const handleDeleteTeacher = async (teacherId) => {
@@ -200,7 +207,13 @@ export default function AdminDashboard({ user, onLogout }) {
     }
   };
 
-  if (loading || !data) return <div style={{ padding: '60px', textAlign: 'center', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', color: '#0284c7', fontWeight: '500' }}>Preparing dashboard workspace...</div>;
+  if (loading || !data) {
+    return (
+      <div style={{ padding: '60px', textAlign: 'center', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', color: '#0284c7', fontWeight: '500' }}>
+        Preparing dashboard workspace...
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', width: '100%', minHeight: '100vh', margin: 0, padding: 0, fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', backgroundColor: '#f0f9ff', color: '#1e293b', boxSizing: 'border-box' }}>
@@ -220,7 +233,6 @@ export default function AdminDashboard({ user, onLogout }) {
         .btn-danger-outline { background: transparent; color: #b91c1c; border: 1px solid #fee2e2; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .btn-danger-outline:hover { background: #fef2f2; border-color: #fca5a5; }
         
-        /* Responsive Metrics CSS Grid rules */
         .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
         @media (max-width: 1200px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 640px) { .metrics-grid { grid-template-columns: 1fr; gap: 16px; } }
@@ -315,6 +327,13 @@ export default function AdminDashboard({ user, onLogout }) {
           </button>
           <button 
             type="button" 
+            onClick={() => { setActiveTab('onboarding'); setIsSidebarOpen(false); }} 
+            className={`nav-button ${activeTab === 'onboarding' ? 'nav-button-active' : ''}`}
+          >
+            <UserPlus size={18} /> Staff Onboarding
+          </button>
+          <button 
+            type="button" 
             onClick={() => { setActiveTab('performance'); setIsSidebarOpen(false); }} 
             className={`nav-button ${activeTab === 'performance' ? 'nav-button-active' : ''}`}
           >
@@ -340,7 +359,9 @@ export default function AdminDashboard({ user, onLogout }) {
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: '700', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
-              {activeTab === 'overview' ? 'System Infrastructure Overview' : 'Institutional Performance Registers'}
+              {activeTab === 'overview' && 'System Infrastructure Overview'}
+              {activeTab === 'onboarding' && 'Staff Profile Management'}
+              {activeTab === 'performance' && 'Institutional Performance Registers'}
             </h1>
             <p style={{ color: '#64748b', margin: '6px 0 0 0', fontSize: '15px', fontWeight: '500' }}>Welcome back, Workspace Coordinator</p>
           </div>
@@ -357,10 +378,9 @@ export default function AdminDashboard({ user, onLogout }) {
           </div>
         )}
 
-        {/* METRICS & OVERVIEW VIEW LAYER */}
+        {/* TAB 1: OVERVIEW & SPATIAL NODE EDITOR */}
         {activeTab === 'overview' && (
           <>
-            {/* Responsive Metrics Row */}
             <div className="metrics-grid">
               <div className="panel-card metric-block">
                 <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Total Rooms</span>
@@ -386,151 +406,180 @@ export default function AdminDashboard({ user, onLogout }) {
               </div>
             </div>
 
-            {/* Dynamic Panel Layout Split (Adapts columns dynamically on mobile layouts) */}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr', gap: '32px', alignItems: 'start' }}>
-              
-              {/* Spatial Map Component */}
-              <div className="panel-card" style={{ overflow: 'hidden' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Compass size={20} color="#0284c7" /> Blueprint Layout Engine
-                </h3>
-                <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 24px 0', fontWeight: '500' }}>
-                  Select a design asset to overlay positioning nodes onto your mapped matrix.
-                </p>
+            <div className="panel-card" style={{ overflow: 'hidden' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Compass size={20} color="#0284c7" /> Blueprint Layout Engine
+              </h3>
+              <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 24px 0', fontWeight: '500' }}>
+                Select a design asset to overlay positioning nodes onto your mapped matrix.
+              </p>
 
-                {!data?.blueprint_json ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', border: '2px dashed #bae6fd', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
-                    <Upload size={36} style={{ color: '#38bdf8', marginBottom: '16px' }} />
-                    <p style={{ fontSize: '14px', marginBottom: '20px', color: '#475569', fontWeight: '500' }}>
-                      Provide blueprint grid asset to deploy layout workspace.
-                    </p>
-                    <input type="file" accept="image/*" onChange={handleFileUpload} id="blueprint-file" style={{ display: 'none' }} />
-                    <label htmlFor="blueprint-file" className="btn-secondary-link" style={{ cursor: 'pointer', padding: '12px 24px' }}>
-                      Locate Source File
-                    </label>
-                    {file && <button type="button" onClick={startAIScan} className="btn-action" style={{ marginTop: '16px', width: '100%' }}>Initialize Grid Parser</button>}
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '24px' }}>
-                      {[
-                        { id: 'wall', label: 'Wall Asset', color: '#334155' },
-                        { id: 'empty', label: 'Walkway Unit', color: '#ffffff' },
-                        { id: 'door', label: 'Access Point', color: '#fef9c3' },
-                        { id: 'extinguisher', label: 'Extinguisher', color: '#ffe4e6' },
-                        { id: 'assembly', label: 'Assembly Zone', color: '#dcfce7' }
-                      ].map(item => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setSelectedCellType(item.id)}
-                          style={{
-                            background: selectedCellType === item.id ? '#0284c7' : '#ffffff',
-                            border: `1px solid ${selectedCellType === item.id ? '#0284c7' : '#cbd5e1'}`,
-                            padding: '8px 14px',
-                            borderRadius: '8px',
-                            color: selectedCellType === item.id ? '#ffffff' : '#334155',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontWeight: '600'
-                          }}
-                        >
-                          <span style={{ width: '12px', height: '12px', background: item.color, borderRadius: '3px', border: '1px solid #cbd5e1' }}></span>
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Matrix scroll frame to support wide multi-grid coordinates on small screens */}
-                    <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch', marginBottom: '16px' }}>
-                      <div className="map-grid-preview" style={{ gridTemplateColumns: `repeat(${data.blueprint_json.width || 1}, minmax(40px, 1fr))`, minWidth: '460px' }}>
-                        {data.blueprint_json.grid?.map((row, rIdx) => 
-                          row.map((cell, cIdx) => {
-                            let cellClass = 'map-cell-empty';
-                            let displayChar = '';
-                            if (cell === 1) cellClass = 'map-cell-wall';
-                            if (cell === 2) { cellClass = 'map-cell-extinguisher'; displayChar = '🧯'; }
-                            if (cell === 3) { cellClass = 'map-cell-door'; displayChar = '🚪'; }
-                            if (cell === 5) { cellClass = 'map-cell-assembly'; displayChar = '🚩'; }
-
-                            return (
-                              <div key={`${rIdx}-${cIdx}`} onClick={() => handleCellClick(rIdx, cIdx)} className={`map-cell ${cellClass}`}>
-                                {displayChar}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: '24px' }}>
+              {!data?.blueprint_json ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', border: '2px dashed #bae6fd', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+                  <Upload size={36} style={{ color: '#38bdf8', marginBottom: '16px' }} />
+                  <p style={{ fontSize: '14px', marginBottom: '20px', color: '#475569', fontWeight: '500' }}>
+                    Provide blueprint grid asset to deploy layout workspace.
+                  </p>
+                  <input type="file" accept="image/*" onChange={handleFileUpload} id="blueprint-file" style={{ display: 'none' }} />
+                  <label htmlFor="blueprint-file" className="btn-secondary-link" style={{ cursor: 'pointer', padding: '12px 24px' }}>
+                    Locate Source File
+                  </label>
+                  {file && <button type="button" onClick={startAIScan} className="btn-action" style={{ marginTop: '16px', width: '100%' }}>Initialize Grid Parser</button>}
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '24px' }}>
+                    {[
+                      { id: 'wall', label: 'Wall Asset', color: '#334155' },
+                      { id: 'empty', label: 'Walkway Unit', color: '#ffffff' },
+                      { id: 'door', label: 'Access Point', color: '#fef9c3' },
+                      { id: 'extinguisher', label: 'Extinguisher', color: '#ffe4e6' },
+                      { id: 'assembly', label: 'Assembly Zone', color: '#dcfce7' }
+                    ].map(item => (
                       <button
+                        key={item.id}
                         type="button"
-                        onClick={() => {
-                          if (window.confirm("Purge spatial records?")) {
-                            setData(prev => ({ ...prev, blueprint_json: null }));
-                            fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              credentials: 'include',
-                              body: JSON.stringify({ blueprint_json: null })
-                            });
-                          }
+                        onClick={() => setSelectedCellType(item.id)}
+                        style={{
+                          background: selectedCellType === item.id ? '#0284c7' : '#ffffff',
+                          border: `1px solid ${selectedCellType === item.id ? '#0284c7' : '#cbd5e1'}`,
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          color: selectedCellType === item.id ? '#ffffff' : '#334155',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontWeight: '600'
                         }}
-                        className="btn-danger-outline"
-                        style={{ width: isMobile ? '100%' : 'auto' }}
-                      >Wipe Configuration Layout</button>
+                      >
+                        <span style={{ width: '12px', height: '12px', background: item.color, borderRadius: '3px', border: '1px solid #cbd5e1' }}></span>
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch', marginBottom: '16px' }}>
+                    <div className="map-grid-preview" style={{ gridTemplateColumns: `repeat(${data.blueprint_json.width || 1}, minmax(40px, 1fr))`, minWidth: '460px' }}>
+                      {data.blueprint_json.grid?.map((row, rIdx) => 
+                        row.map((cell, cIdx) => {
+                          let cellClass = 'map-cell-empty';
+                          let displayChar = '';
+                          if (cell === 1) cellClass = 'map-cell-wall';
+                          if (cell === 2) { cellClass = 'map-cell-extinguisher'; displayChar = '🧯'; }
+                          if (cell === 3) { cellClass = 'map-cell-door'; displayChar = '🚪'; }
+                          if (cell === 5) { cellClass = 'map-cell-assembly'; displayChar = '🚩'; }
+
+                          return (
+                            <div key={`${rIdx}-${cIdx}`} onClick={() => handleCellClick(rIdx, cIdx)} className={`map-cell ${cellClass}`}>
+                              {displayChar}
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* User Enrollment Onboarding Form */}
-              <div className="panel-card">
-                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <UserPlus size={20} color="#0284c7" /> {isEditingTeacher ? 'Update Instructor Attributes' : 'Staff Profile Onboarding'}
-                </h3>
-
-                <form onSubmit={handleCreateTeacher}>
-                  <div style={{ marginBottom: '18px' }}>
-                    <label className="label-text">Legal Full Name</label>
-                    <input type="text" className="form-control" placeholder="e.g. Jonathan Miller" value={tName} onChange={e => setTName(e.target.value)} required />
+                  <div style={{ marginTop: '24px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Purge spatial records?")) {
+                          setData(prev => ({ ...prev, blueprint_json: null }));
+                          fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ blueprint_json: null })
+                          });
+                        }
+                      }}
+                      className="btn-danger-outline"
+                      style={{ width: isMobile ? '100%' : 'auto' }}
+                    >Wipe Configuration Layout</button>
                   </div>
-                  
-                  {!isEditingTeacher && (
-                    <div style={{ marginBottom: '18px' }}>
-                      <label className="label-text">Login ID / Access Tag</label>
-                      <input type="text" className="form-control" placeholder="e.g. T-104" value={tUsername} onChange={e => setTUsername(e.target.value)} required />
-                    </div>
-                  )}
-
-                  <div style={{ marginBottom: '18px' }}>
-                    <label className="label-text">Security Key {isEditingTeacher && '(Omit to protect existing)'}</label>
-                    <input type="password" className="form-control" placeholder="••••••••" value={tPassword} onChange={e => setTPassword(e.target.value)} required={!isEditingTeacher} />
-                  </div>
-
-                  <div style={{ marginBottom: '28px' }}>
-                    <label className="label-text">Room Assignment Scope</label>
-                    <input type="text" className="form-control" placeholder="e.g. Room 12-B" value={tClass} onChange={e => setTClass(e.target.value)} required />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <button type="submit" className="btn-action" style={{ width: '100%' }}>{isEditingTeacher ? 'Commit System Updates' : 'Authorize Account Creation'}</button>
-                    {isEditingTeacher && (
-                      <button type="button" onClick={() => { setIsEditingTeacher(null); setTName(''); setTUsername(''); setTClass(''); setTPassword(''); }} className="btn-secondary-link" style={{ width: '100%' }}>Abort</button>
-                    )}
-                  </div>
-                </form>
-              </div>
-
+                </div>
+              )}
             </div>
           </>
         )}
 
-        {/* PERFORMANCE TABS SYSTEM ENGINE VIEW */}
+        {/* TAB 2: STAFF ONBOARDING FORM */}
+        {activeTab === 'onboarding' && (
+          <div className="panel-card" style={{ maxWidth: '650px', margin: '0 auto' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <UserPlus size={20} color="#0284c7" /> {isEditingTeacher ? 'Update Instructor Attributes' : 'Staff Profile Onboarding'}
+            </h3>
+
+            <form onSubmit={handleCreateTeacher}>
+              <div style={{ marginBottom: '18px' }}>
+                <label className="label-text">Legal Full Name</label>
+                <input type="text" className="form-control" placeholder="e.g. Jonathan Miller" value={tName} onChange={e => setTName(e.target.value)} required />
+              </div>
+              
+              {!isEditingTeacher && (
+                <div style={{ marginBottom: '18px' }}>
+                  <label className="label-text">Login ID / Access Tag</label>
+                  <input type="text" className="form-control" placeholder="e.g. T-104" value={tUsername} onChange={e => setTUsername(e.target.value)} required />
+                </div>
+              )}
+
+              <div style={{ marginBottom: '18px' }}>
+                <label className="label-text">Security Key {isEditingTeacher && '(Omit to protect existing)'}</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input 
+                    type={showTPassword ? "text" : "password"} 
+                    className="form-control" 
+                    placeholder="••••••••" 
+                    style={{ paddingRight: '48px', marginTop: '8px' }}
+                    value={tPassword} 
+                    onChange={e => setTPassword(e.target.value)} 
+                    required={!isEditingTeacher} 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowTPassword(!showTPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: 'calc(50% + 4px)',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#64748b',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {showTPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '28px' }}>
+                <label className="label-text">Room Assignment Scope</label>
+                <input type="text" className="form-control" placeholder="e.g. Room 12-B" value={tClass} onChange={e => setTClass(e.target.value)} required />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button type="submit" className="btn-action" style={{ width: '100%' }}>{isEditingTeacher ? 'Commit System Updates' : 'Authorize Account Creation'}</button>
+                {isEditingTeacher && (
+                  <button 
+                    type="button" 
+                    onClick={() => { setIsEditingTeacher(null); setTName(''); setTUsername(''); setTClass(''); setTPassword(''); setShowTPassword(false); setActiveTab('performance'); }} 
+                    className="btn-secondary-link" 
+                    style={{ width: '100%' }}
+                  >Abort</button>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* TAB 3: PERFORMANCE TABS SYSTEM ENGINE VIEW */}
         {activeTab === 'performance' && (
           <div className="panel-card" style={{ padding: isMobile ? '16px' : '28px' }}>
             {!data?.teachers || data.teachers.length === 0 ? (
@@ -544,7 +593,6 @@ export default function AdminDashboard({ user, onLogout }) {
                   return (
                     <div key={teacher.teacher_id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#ffffff' }}>
                       
-                      {/* Responsive Card Headers */}
                       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: '16px', padding: '18px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                         <div>
                           <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>{teacher.teacher_name}</h4>
@@ -559,14 +607,14 @@ export default function AdminDashboard({ user, onLogout }) {
                               <span style={{ fontSize: '13px', fontWeight: '700', color: '#0369a1' }}>{avgEvacTime}s Average Velocity</span>
                             </div>
                           )}
+                          
                           <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-                            <button type="button" onClick={() => { handleEditTeacherClick(teacher); setActiveTab('overview'); }} className="icon-btn" aria-label="Modify profile"><Edit2 size={14} /></button>
+                            <button type="button" onClick={() => handleEditTeacherClick(teacher)} className="icon-btn" aria-label="Modify profile"><Edit2 size={14} /></button>
                             <button type="button" onClick={() => handleDeleteTeacher(teacher.teacher_id)} className="icon-btn icon-btn-del" aria-label="Drop account"><Trash2 size={14} /></button>
                           </div>
                         </div>
                       </div>
 
-                      {/* Horizontal Responsive Frame Wrapper around data table */}
                       {teacher.students && teacher.students.length > 0 ? (
                         <div className="table-responsive-scroll">
                           <table>
@@ -587,7 +635,6 @@ export default function AdminDashboard({ user, onLogout }) {
                                 const eqQuiz = studentScores.find(sc => sc.disaster_type === 'earthquake' && sc.activity_type === 'quiz');
                                 const floodQuiz = studentScores.find(sc => sc.disaster_type === 'flood' && sc.activity_type === 'quiz');
                                 const lsQuiz = studentScores.find(sc => sc.disaster_type === 'landslide' && sc.activity_type === 'quiz');
-
                                 return (
                                   <tr key={student.id || student.roll_no}>
                                     <td style={{ color: '#64748b', fontWeight: '600', fontFamily: 'monospace' }}>{student.roll_no}</td>
