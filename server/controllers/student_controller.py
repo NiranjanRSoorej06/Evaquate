@@ -1,0 +1,32 @@
+from flask import jsonify
+
+from services import score_service, quiz_service, blueprint_service
+from utils.helpers import get_json_body
+
+
+def get_quiz(disasterType):
+    data, error = quiz_service.get_quiz(disasterType)
+    if error:
+        return jsonify(error[0]), error[1]
+    return jsonify(data)
+
+
+def submit_score():
+    body = get_json_body()
+    score, error = score_service.submit_score(
+        body.get('student_id'),
+        body.get('disaster_type'),
+        body.get('activity_type'),
+        body.get('score'),
+        body.get('duration_seconds'),
+    )
+    if error:
+        return jsonify(error), 500
+    return jsonify({'success': True, 'score': score})
+
+
+def get_school_map(schoolId):
+    blueprint, error = blueprint_service.get_school_map(schoolId)
+    if error:
+        return jsonify(error[0]), error[1]
+    return jsonify(blueprint)
