@@ -18,6 +18,7 @@ export default function SuperAdminDashboard({ user, onLogout }) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false); // Password visibility toggle for registration
   
   // Password Reset State
   const [resetPassword, setResetPassword] = useState('');
@@ -99,6 +100,7 @@ export default function SuperAdminDashboard({ user, onLogout }) {
         setName('');
         setCode('');
         setPassword('');
+        setShowRegisterPassword(false); // Reset visibility state on successful register
         fetchSchools();
       } else {
         setError(data.message || 'Failed to register school.');
@@ -505,7 +507,7 @@ export default function SuperAdminDashboard({ user, onLogout }) {
                   <button
                     type="button"
                     onClick={() => setShowResetPassword(!showResetPassword)}
-                    style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7' }}
+                    style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', display: 'flex', alignItems: 'center' }}
                   >
                     {showResetPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -562,14 +564,25 @@ export default function SuperAdminDashboard({ user, onLogout }) {
 
               <div className="form-group">
                 <label className="form-label">Access Passphrase</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  placeholder="Initialize root entity password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                />
+                {/* Wrapped layout structure matching your reset passphrase module style pattern */}
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showRegisterPassword ? 'text' : 'password'}
+                    className="form-input"
+                    placeholder="Initialize root entity password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    style={{ paddingRight: '40px' }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                    style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', display: 'flex', alignItems: 'center' }}
+                  >
+                    {showRegisterPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}>
