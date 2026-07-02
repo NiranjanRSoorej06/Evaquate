@@ -2,6 +2,7 @@ import json
 import traceback
 
 from models import student_model, score_model, quiz_model
+from services import quiz_service
 from utils.id_generator import generate_id
 from utils.csv_parser import parse_quiz_csv
 
@@ -80,8 +81,8 @@ def delete_student(student_id):
         return None, {'success': False, 'message': 'Database error'}
 
 
-def upload_quiz(file, disaster_type):
-    """Upload and parse a quiz CSV, then store questions in the database.
+def upload_quiz(file, disaster_type, teacher_id):
+    """Upload and parse a quiz CSV, then store the full quiz JSON for the teacher.
 
     Returns:
         (result_dict, None) on success
@@ -92,12 +93,16 @@ def upload_quiz(file, disaster_type):
         if not questions:
             raise ValueError('No valid quiz questions were found in the CSV file.')
 
-        quiz_model.delete_by_disaster_type(disaster_type)
+        quiz_data = quiz_service.build_quiz_data(disaster_type, questions)
+        quiz_model.delete_by_teacher_and_disaster(teacher_id, disaster_type)
+        quiz_model.insert_quiz(teacher_id, json.dumps(quiz_data))
 
-        for question_payload in questions:
-            quiz_model.insert_question(disaster_type, question_payload, json.dumps(questions))
-
-        return {'success': True, 'disaster_type': disaster_type, 'questions': questions}, None
+        return {
+            'success': True,
+            'disaster_type': disaster_type,
+            'title': quiz_data.get('title'),
+            'questions': quiz_service.quiz_data_to_questions(quiz_data),
+        }, None
     except ValueError as value_error:
         return None, ({'success': False, 'message': str(value_error)}, 400)
     except Exception as e:

@@ -122,30 +122,43 @@ def init():
             );
         """)
 
-        # Quizzes
+        # Quizzes — one row per teacher quiz; full payload in quiz_data JSONB
+        # quiz_data shape: { title, disaster, q1: { question, option_a..d, answer }, q2: {...}, ... }
         cur.execute("""
             CREATE TABLE IF NOT EXISTS quizzes (
                 id SERIAL PRIMARY KEY,
-                disaster_type VARCHAR(50) NOT NULL,
-                question TEXT,
-                option_a TEXT,
-                option_b TEXT,
-                option_c TEXT,
-                option_d TEXT,
-                correct_answer TEXT,
-                questions JSONB NOT NULL DEFAULT '[]'::jsonb
+                teacher_id VARCHAR(50)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+                quiz_data JSONB NOT NULL DEFAULT '{}'::jsonb
             );
         """)
 
+        cur.execute("""
+            ALTER TABLE quizzes
+            ADD COLUMN IF NOT EXISTS teacher_id VARCHAR(50)
+                REFERENCES users(id)
+                ON DELETE CASCADE;
+        """)
+        cur.execute("""
+            ALTER TABLE quizzes
+            ADD COLUMN IF NOT EXISTS quiz_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+        """)
+        cur.execute("UPDATE quizzes SET quiz_data = '{}'::jsonb WHERE quiz_data IS NULL;")
+
+        # Drop legacy per-question columns from older schema
+        for legacy_column in (
+            'disaster_type',
+            'question',
+            'option_a',
+            'option_b',
+            'option_c',
+            'option_d',
+            'correct_answer',
+            'questions',
+        ):
+            cur.execute(f"ALTER TABLE quizzes DROP COLUMN IF EXISTS {legacy_column};")
         cur.execute("ALTER TABLE quizzes DROP CONSTRAINT IF EXISTS quizzes_disaster_type_key;")
-        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS question TEXT;")
-        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_a TEXT;")
-        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_b TEXT;")
-        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_c TEXT;")
-        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS option_d TEXT;")
-        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS correct_answer TEXT;")
-        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS questions JSONB;")
-        cur.execute("UPDATE quizzes SET questions = '[]'::jsonb WHERE questions IS NULL;")
 
         # Scores
         cur.execute("""

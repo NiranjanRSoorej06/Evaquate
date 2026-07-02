@@ -1,11 +1,12 @@
-from flask import jsonify
+from flask import jsonify, request
 
 from services import score_service, quiz_service, blueprint_service
 from utils.helpers import get_json_body
 
 
 def get_quiz(disasterType):
-    data, error = quiz_service.get_quiz(disasterType)
+    teacher_id = request.user.get('teacher_id')
+    data, error = quiz_service.get_quiz(teacher_id, disasterType)
     if error:
         return jsonify(error[0]), error[1]
     return jsonify(data)
