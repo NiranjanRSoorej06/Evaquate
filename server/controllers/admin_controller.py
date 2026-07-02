@@ -15,8 +15,7 @@ def dashboard(schoolId):
 def create_teacher(schoolId):
     body = get_json_body()
     teacher, error = school_services.create_teacher(
-        schoolId, body.get('username'), body.get('password'),
-        body.get('name'), body.get('class_assigned')
+        schoolId, body.get('password'), body.get('name'), body.get('class_assigned')
     )
     if error:
         return jsonify(error), 400

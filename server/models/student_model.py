@@ -45,6 +45,10 @@ def roll_no_exists_in_school(school_id, roll_no):
     return sql('SELECT 1 FROM students WHERE school_id = $1 AND roll_no = $2', [school_id, roll_no])
 
 
+def id_exists(student_id):
+    return sql('SELECT 1 FROM students WHERE id = $1', [student_id])
+
+
 def create(student_id, school_id, teacher_id, roll_no, name, password):
     return sql(
         """INSERT INTO students (id, school_id, teacher_id, roll_no, name, password)

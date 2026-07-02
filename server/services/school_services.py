@@ -2,7 +2,7 @@ import time
 import traceback
 
 from models import school_model, user_model, student_model, score_model
-from utils.id_generator import generate_id
+from utils.id_generator import generate_id, build_teacher_id
 
 
 def get_all_schools():
@@ -149,16 +149,33 @@ def get_dashboard(school_id):
 
 # ---- Teacher management (admin operations) ----
 
-def create_teacher(school_id, username, password, name, class_assigned):
+def create_teacher(school_id, password, name, class_assigned):
     """Create a new teacher account. Returns (teacher_dict, error)."""
     try:
-        user_check = user_model.username_exists(username)
-        if user_check['rowCount'] > 0:
-            return None, {'success': False, 'message': 'Teacher username already exists.'}
+        if not class_assigned or not str(class_assigned).strip():
+            return None, {'success': False, 'message': 'Class assignment is required.'}
+        if not password:
+            return None, {'success': False, 'message': 'Password is required.'}
 
-        new_teacher_id = generate_id('t')
-        insert_result = user_model.create_teacher(new_teacher_id, school_id, username, password, name, class_assigned)
+        school = school_model.find_by_id(school_id)
+        if not school:
+            return None, {'success': False, 'message': 'School not found.'}
+
+        school_unique_code = school.get('unique_code')
+        if not school_unique_code or not str(school_unique_code).strip():
+            return None, {'success': False, 'message': 'School unique code is missing.'}
+
+        new_teacher_id = build_teacher_id(school_unique_code, class_assigned)
+
+        if user_model.id_exists(new_teacher_id)['rowCount'] > 0:
+            return None, {'success': False, 'message': 'A teacher for this class already exists.'}
+
+        insert_result = user_model.create_teacher(
+            new_teacher_id, school_id, new_teacher_id, password, name, class_assigned
+        )
         return insert_result['rows'][0], None
+    except ValueError as value_error:
+        return None, {'success': False, 'message': str(value_error)}
     except Exception as e:
         print('Error creating teacher', e)
         return None, {'success': False, 'message': 'Database error'}

@@ -3,7 +3,7 @@ from utils.sql import sql
 
 def find_by_credentials(username, password):
     return sql(
-        """SELECT u.*, s.name as school_name
+        """SELECT u.*, s.name as school_name, s.unique_code as school_unique_code
            FROM users u
            LEFT JOIN schools s ON u.school_id = s.id
            WHERE u.username = $1 AND u.password = $2""",
@@ -14,6 +14,10 @@ def find_by_credentials(username, password):
 def find_by_id(user_id):
     result = sql('SELECT * FROM users WHERE id = $1', [user_id])
     return result['rows'][0] if result['rowCount'] > 0 else None
+
+
+def id_exists(user_id):
+    return sql('SELECT 1 FROM users WHERE id = $1', [user_id])
 
 
 def username_exists(username):
