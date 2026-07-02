@@ -45,7 +45,7 @@ def upload_quiz(teacherId):
     if not uploaded_file or not disaster_type:
         return jsonify({'success': False, 'message': 'A CSV file and disaster type are required.'}), 400
 
-    result, error = teacher_service.upload_quiz(uploaded_file, disaster_type)
+    result, error = teacher_service.upload_quiz(uploaded_file, disaster_type, teacherId)
     if error:
         return jsonify(error[0]), error[1]
     return jsonify(result)
