@@ -41,6 +41,7 @@ def login(username, password):
                     'name': user.get('name'),
                     'role': 'teacher',
                     'school_id': user.get('school_id'),
+                    'school_unique_code': user.get('school_unique_code') or '',
                     'class_assigned': user.get('class_assigned'),
                     'school_name': user.get('school_name') or '',
                 }

@@ -1,9 +1,9 @@
 import json
 import traceback
 
-from models import student_model, score_model, quiz_model
+from models import student_model, score_model, quiz_model, user_model
 from services import quiz_service
-from utils.id_generator import generate_id
+from utils.id_generator import build_student_id
 from utils.csv_parser import parse_quiz_csv
 
 
@@ -30,13 +30,22 @@ def get_students_with_scores(teacher_id):
 def add_student(teacher_id, name, roll_no, school_id):
     """Add a single student. Returns (student_dict, error)."""
     try:
+        teacher_res = user_model.find_teacher(teacher_id)
+        if teacher_res['rowCount'] == 0:
+            return None, {'success': False, 'message': 'Teacher not found.'}
+
         check_res = student_model.roll_no_exists_in_school(school_id, roll_no)
         if check_res['rowCount'] > 0:
             return None, {'success': False, 'message': f'Roll number {roll_no} already exists in this school.'}
 
-        new_student_id = generate_id('s')
+        new_student_id = build_student_id(teacher_id, roll_no)
+        if student_model.id_exists(new_student_id)['rowCount'] > 0:
+            return None, {'success': False, 'message': 'A student with this ID already exists.'}
+
         insert_res = student_model.create(new_student_id, school_id, teacher_id, roll_no, name, name)
         return insert_res['rows'][0], None
+    except ValueError as value_error:
+        return None, {'success': False, 'message': str(value_error)}
     except Exception as e:
         print('Error adding student', e)
         return None, {'success': False, 'message': 'Database error'}
@@ -45,6 +54,10 @@ def add_student(teacher_id, name, roll_no, school_id):
 def bulk_import_students(teacher_id, students_list, school_id):
     """Bulk import students from a list. Returns (result_dict, error)."""
     try:
+        teacher_res = user_model.find_teacher(teacher_id)
+        if teacher_res['rowCount'] == 0:
+            return None, {'success': False, 'message': 'Teacher not found.'}
+
         added_count = 0
         skipped_count = 0
 
@@ -57,13 +70,22 @@ def bulk_import_students(teacher_id, students_list, school_id):
                 continue
 
             check_res = student_model.roll_no_exists_in_school(school_id, clean_roll)
-
-            if check_res['rowCount'] == 0:
-                rand_id = generate_id('s', suffix_length=5)
-                student_model.insert_bulk(rand_id, school_id, teacher_id, clean_roll, clean_name, clean_name)
-                added_count += 1
-            else:
+            if check_res['rowCount'] > 0:
                 skipped_count += 1
+                continue
+
+            try:
+                student_id = build_student_id(teacher_id, clean_roll)
+            except ValueError:
+                skipped_count += 1
+                continue
+
+            if student_model.id_exists(student_id)['rowCount'] > 0:
+                skipped_count += 1
+                continue
+
+            student_model.insert_bulk(student_id, school_id, teacher_id, clean_roll, clean_name, clean_name)
+            added_count += 1
 
         return {'success': True, 'addedCount': added_count, 'skippedCount': skipped_count}, None
     except Exception as e:

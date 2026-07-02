@@ -11,7 +11,6 @@ export default function AdminDashboard({ user, onLogout }) {
   const [isMobile, setIsMobile] = useState(false);
   
   const [tName, setTName] = useState('');
-  const [tUsername, setTUsername] = useState('');
   const [tPassword, setTPassword] = useState('');
   const [tClass, setTClass] = useState('');
   const [isEditingTeacher, setIsEditingTeacher] = useState(null);
@@ -73,14 +72,18 @@ export default function AdminDashboard({ user, onLogout }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ name: tName, username: tUsername, password: tPassword, class_assigned: tClass })
+          body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass })
         });
         resData = await response.json();
       }
 
       if (resData.success) {
-        setSuccessMsg(isEditingTeacher ? 'Teacher updated successfully.' : 'Teacher account created successfully.');
-        setTName(''); setTUsername(''); setTPassword(''); setTClass('');
+        setSuccessMsg(
+          isEditingTeacher
+            ? 'Teacher updated successfully.'
+            : `Teacher account created. Login ID: ${resData.teacher?.id || `${user?.unique_code}_${tClass}`.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`
+        );
+        setTName(''); setTPassword(''); setTClass('');
         setIsEditingTeacher(null);
         setShowPassword(false);
         fetchDashboardData();
@@ -95,8 +98,7 @@ export default function AdminDashboard({ user, onLogout }) {
   const handleEditTeacherClick = (teacher) => {
     setIsEditingTeacher(teacher.teacher_id);
     setTName(teacher.teacher_name);
-    setTUsername(teacher.teacher_username);
-    setTPassword(''); 
+    setTPassword('');
     setTClass(teacher.class_assigned);
     setShowPassword(false);
   };
@@ -217,15 +219,18 @@ export default function AdminDashboard({ user, onLogout }) {
           <label className="label-text">Legal Full Name</label>
           <input type="text" className="form-control" placeholder="e.g. Jonathan Miller" value={tName} onChange={e => setTName(e.target.value)} required />
         </div>
-        
-        {!isEditingTeacher && (
-          <div style={{ marginBottom: '18px' }}>
-            <label className="label-text">Login ID / Access Tag</label>
-            <input type="text" className="form-control" placeholder="e.g. T-104" value={tUsername} onChange={e => setTUsername(e.target.value)} required />
-          </div>
-        )}
 
         <div style={{ marginBottom: '18px' }}>
+          <label className="label-text">Room Assignment Scope</label>
+          <input type="text" className="form-control" placeholder="e.g. Room 12-B" value={tClass} onChange={e => setTClass(e.target.value)} required disabled={!!isEditingTeacher} />
+          {!isEditingTeacher && (
+            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+              Teacher login ID will be generated as <strong>{user?.unique_code}_&lt;class&gt;</strong> after you submit.
+            </p>
+          )}
+        </div>
+
+        <div style={{ marginBottom: '28px' }}>
           <label className="label-text">Security Key {isEditingTeacher && '(Omit to protect existing)'}</label>
           <div style={{ position: 'relative' }}>
             <input
@@ -261,15 +266,10 @@ export default function AdminDashboard({ user, onLogout }) {
           </div>
         </div>
 
-        <div style={{ marginBottom: '28px' }}>
-          <label className="label-text">Room Assignment Scope</label>
-          <input type="text" className="form-control" placeholder="e.g. Room 12-B" value={tClass} onChange={e => setTClass(e.target.value)} required />
-        </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <button type="submit" className="btn-action" style={{ width: '100%' }}>{isEditingTeacher ? 'Commit System Updates' : 'Authorize Account Creation'}</button>
           {isEditingTeacher && (
-            <button type="button" onClick={() => { setIsEditingTeacher(null); setTName(''); setTUsername(''); setTClass(''); setTPassword(''); setShowPassword(false); }} className="btn-secondary-link" style={{ width: '100%' }}>Abort</button>
+            <button type="button" onClick={() => { setIsEditingTeacher(null); setTName(''); setTClass(''); setTPassword(''); setShowPassword(false); }} className="btn-secondary-link" style={{ width: '100%' }}>Abort</button>
           )}
         </div>
       </form>
@@ -592,7 +592,7 @@ export default function AdminDashboard({ user, onLogout }) {
                         <div>
                           <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>{teacher.teacher_name}</h4>
                           <span style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'inline-block', fontWeight: '500' }}>
-                            Tag: <strong style={{ color: '#334155', fontFamily: 'monospace' }}>{teacher.teacher_username}</strong> &bull; Zone Target: <strong style={{ color: '#334155' }}>{teacher.class_assigned || 'Unassigned'}</strong>
+                            Tag: <strong style={{ color: '#334155', fontFamily: 'monospace' }}>{teacher.teacher_id}</strong> &bull; Zone Target: <strong style={{ color: '#334155' }}>{teacher.class_assigned || 'Unassigned'}</strong>
                           </span>
                         </div>
                         
@@ -615,6 +615,7 @@ export default function AdminDashboard({ user, onLogout }) {
                           <table>
                             <thead>
                               <tr>
+                                <th>Student ID</th>
                                 <th>Roll Number</th>
                                 <th>Student Identity</th>
                                 <th>Drill Response</th>
@@ -633,6 +634,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
                                 return (
                                   <tr key={student.id || student.roll_no}>
+                                    <td style={{ color: '#64748b', fontWeight: '600', fontFamily: 'monospace' }}>{student.id}</td>
                                     <td style={{ color: '#64748b', fontWeight: '600', fontFamily: 'monospace' }}>{student.roll_no}</td>
                                     <td style={{ fontWeight: '600', color: '#0f172a' }}>{student.name}</td>
                                     <td style={{ color: '#0284c7', fontWeight: '700' }}>{fireDrill ? `${fireDrill.score} pts` : '—'}</td>

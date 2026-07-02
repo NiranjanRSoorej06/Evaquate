@@ -2,10 +2,10 @@
 Teacher (User) table schema.
 
 Mirrors the `users` database table:
-    id             VARCHAR(50) PRIMARY KEY
+    id             VARCHAR(50) PRIMARY KEY   -- deterministic: school_unique_code_class
     school_id      VARCHAR(50) REFERENCES schools(id) ON DELETE SET NULL
     role           VARCHAR(50) NOT NULL  -- 'super_admin' | 'teacher'
-    username       VARCHAR(100) UNIQUE NOT NULL
+    username       VARCHAR(100) UNIQUE NOT NULL  -- same as id for teachers
     password       VARCHAR(255) NOT NULL
     name           VARCHAR(255)
     class_assigned VARCHAR(100)
@@ -51,7 +51,6 @@ class User:
 @dataclass
 class CreateTeacherRequest:
     """Payload expected by POST /api/admin/<schoolId>/teachers."""
-    username: str
     password: str
     name: Optional[str]
     class_assigned: Optional[str]
@@ -59,15 +58,14 @@ class CreateTeacherRequest:
     @classmethod
     def from_dict(cls, data: dict) -> 'CreateTeacherRequest':
         return cls(
-            username=data.get('username', ''),
             password=data.get('password', ''),
             name=data.get('name'),
             class_assigned=data.get('class_assigned'),
         )
 
     def validate(self):
-        if not self.username:
-            raise ValueError('Teacher username is required.')
+        if not self.class_assigned or not str(self.class_assigned).strip():
+            raise ValueError('Class assignment is required.')
         if not self.password:
             raise ValueError('Teacher password is required.')
 

@@ -2,12 +2,12 @@
 Student table schema.
 
 Mirrors the `students` database table:
-    id         VARCHAR(50) PRIMARY KEY
+    id         VARCHAR(50) PRIMARY KEY   -- deterministic: schoolcode_class_rollnumber
     school_id  VARCHAR(50) REFERENCES schools(id) ON DELETE CASCADE
     teacher_id VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL
     roll_no    VARCHAR(50) NOT NULL
     name       VARCHAR(255) NOT NULL
-    password   VARCHAR(255) NOT NULL
+    password   VARCHAR(255) NOT NULL     -- defaults to student name
     UNIQUE (school_id, roll_no)
 
 Also includes the `scores` table schema (used alongside students):

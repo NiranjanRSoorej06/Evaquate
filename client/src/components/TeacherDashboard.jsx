@@ -70,7 +70,7 @@ export default function TeacherDashboard({ user, onLogout }) {
       });
       const data = await response.json();
       if (data.success) {
-        setSuccessMsg('Student added successfully.');
+        setSuccessMsg(`Student added successfully. ID: ${data.student?.id || 'generated'}`);
         setStudentName('');
         setStudentRollNo('');
         fetchTeacherData();
@@ -227,7 +227,9 @@ export default function TeacherDashboard({ user, onLogout }) {
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.1fr', gap: '24px' }}>
               <div className="panel-card">
                 <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><UserPlus size={20} color="#0284c7" /> Add Student</h3>
-                <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>Only student enrollment is managed here. Quiz creation is handled in the dedicated tab.</p>
+                <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>
+                  Student ID is generated automatically as <strong>{user?.school_unique_code || user?.unique_code}_&lt;class&gt;_&lt;roll&gt;</strong>. Login password is the student&apos;s name.
+                </p>
                 <form onSubmit={handleAddStudent}>
                   <div style={{ marginBottom: '16px' }}><label className="label-text">Student Name</label><input type="text" className="form-control" value={studentName} onChange={e => setStudentName(e.target.value)} required /></div>
                   <div style={{ marginBottom: '20px' }}><label className="label-text">Roll Number</label><input type="text" className="form-control" value={studentRollNo} onChange={e => setStudentRollNo(e.target.value)} required /></div>
