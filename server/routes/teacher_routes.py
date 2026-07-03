@@ -41,3 +41,17 @@ def delete_student(teacherId, studentId):
 @tos
 def upload_quiz(teacherId):
     return teacher_controller.upload_quiz(teacherId)
+
+
+@teacher_bp.route('/api/teacher/<teacherId>/quizzes', methods=['GET'])
+@auth
+@tos
+def list_quizzes(teacherId):
+    return teacher_controller.list_quizzes(teacherId)
+
+
+@teacher_bp.route('/api/teacher/<teacherId>/quizzes/<disasterType>', methods=['GET'])
+@auth
+@tos
+def get_quiz(teacherId, disasterType):
+    return teacher_controller.get_quiz(teacherId, disasterType)

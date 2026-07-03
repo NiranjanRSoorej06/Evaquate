@@ -12,6 +12,14 @@ def get_quiz(disasterType):
     return jsonify(data)
 
 
+def list_quizzes():
+    teacher_id = request.user.get('teacher_id')
+    data, error = quiz_service.list_available_quizzes(teacher_id)
+    if error:
+        return jsonify(error[0]), error[1]
+    return jsonify(data)
+
+
 def submit_score():
     body = get_json_body()
     score, error = score_service.submit_score(

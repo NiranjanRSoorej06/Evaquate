@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, UserPlus, BarChart3, ShieldCheck, Menu, X, Upload, Flame, ShieldAlert, Waves, Mountain } from 'lucide-react';
+import { Trash2, UserPlus, BarChart3, ShieldCheck, Menu, X, Upload, Flame, ShieldAlert, Waves, Mountain, BookOpen, ChevronLeft, CheckCircle2, CircleDashed } from 'lucide-react';
 
 const disasterOptions = [
   { id: 'fire', label: 'Fire Safety', description: 'Fire escape and extinguisher basics', icon: Flame, color: '#ef4444' },
@@ -22,6 +22,11 @@ export default function TeacherDashboard({ user, onLogout }) {
   const [selectedDisaster, setSelectedDisaster] = useState('fire');
   const [quizFile, setQuizFile] = useState(null);
   const [uploadingQuiz, setUploadingQuiz] = useState(false);
+  const [assignedQuizzes, setAssignedQuizzes] = useState([]);
+  const [assignedQuizCount, setAssignedQuizCount] = useState(0);
+  const [quizzesLoading, setQuizzesLoading] = useState(false);
+  const [selectedQuizDetail, setSelectedQuizDetail] = useState(null);
+  const [quizDetailLoading, setQuizDetailLoading] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -48,9 +53,57 @@ export default function TeacherDashboard({ user, onLogout }) {
     }
   }, [user?.id]);
 
+  const fetchTeacherQuizzes = useCallback(async () => {
+    if (!user?.id) return;
+    setQuizzesLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes`, { credentials: 'include' });
+      const data = await response.json();
+      if (data?.quizzes) {
+        setAssignedQuizzes(data.quizzes);
+        setAssignedQuizCount(data.assigned_count ?? data.quizzes.filter(q => q.status === 'assigned').length);
+      }
+    } catch (err) {
+      console.error('Error fetching teacher quizzes', err);
+      setErrorMsg('Unable to load quiz status right now.');
+    } finally {
+      setQuizzesLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     fetchTeacherData();
-  }, [fetchTeacherData]);
+    fetchTeacherQuizzes();
+  }, [fetchTeacherData, fetchTeacherQuizzes]);
+
+  useEffect(() => {
+    if (activeTab === 'quizzes') {
+      fetchTeacherQuizzes();
+    }
+  }, [activeTab, fetchTeacherQuizzes]);
+
+  const getDisasterOption = (disasterType) => disasterOptions.find(option => option.id === disasterType);
+
+  const handleViewQuiz = async (disasterType) => {
+    if (!user?.id) return;
+    setQuizDetailLoading(true);
+    setSelectedQuizDetail(null);
+    try {
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes/${disasterType}`, { credentials: 'include' });
+      const data = await response.json();
+      if (data?.questions) {
+        setSelectedQuizDetail(data);
+      } else {
+        setErrorMsg(data.message || 'Could not load quiz questions.');
+      }
+    } catch (err) {
+      setErrorMsg('Could not load quiz questions.');
+    } finally {
+      setQuizDetailLoading(false);
+    }
+  };
+
+  const answerLabel = (index) => ['A', 'B', 'C', 'D'][index] || '?';
 
   const getLatestScore = (student, disasterType, activityType) => {
     const score = (student.scores || []).find(sc => sc.disaster_type === disasterType && sc.activity_type === activityType);
@@ -124,6 +177,7 @@ export default function TeacherDashboard({ user, onLogout }) {
       if (data.success) {
         setSuccessMsg(`Quiz uploaded for ${selectedDisaster}. Students can now access it.`);
         setQuizFile(null);
+        fetchTeacherQuizzes();
       } else {
         setErrorMsg(data.message || 'Quiz upload failed.');
       }
@@ -153,6 +207,16 @@ export default function TeacherDashboard({ user, onLogout }) {
         .nav-button { background: transparent; border: none; color: #e0f2fe; padding: 12px 14px; border-radius: 10px; font-weight: 500; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer; }
         .nav-button:hover { background: rgba(255,255,255,0.08); color: #fff; }
         .nav-button-active { background: rgba(255,255,255,0.15) !important; color: #fff !important; font-weight: 600; }
+        .quiz-status-card { text-align: left; border-radius: 14px; border: 1px solid #e2e8f0; background: #fff; padding: 18px; cursor: pointer; transition: all 0.15s ease; width: 100%; font-family: inherit; }
+        .quiz-status-card:hover { border-color: #0284c7; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.08); transform: translateY(-1px); }
+        .quiz-status-card-disabled { cursor: default; opacity: 0.72; }
+        .quiz-status-card-disabled:hover { border-color: #e2e8f0; box-shadow: none; transform: none; }
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .status-assigned { background: #dcfce7; color: #166534; }
+        .status-unassigned { background: #f1f5f9; color: #64748b; }
+        .question-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
+        .option-pill { display: inline-block; padding: 8px 12px; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0; font-size: 13px; margin: 4px 8px 4px 0; }
+        .option-pill-correct { background: #dcfce7; border-color: #86efac; color: #166534; font-weight: 600; }
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 12px 10px; color: #475569; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #e2e8f0; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
@@ -191,6 +255,9 @@ export default function TeacherDashboard({ user, onLogout }) {
           <button type="button" onClick={() => { setActiveTab('quiz'); setIsSidebarOpen(false); }} className={`nav-button ${activeTab === 'quiz' ? 'nav-button-active' : ''}`}>
             <Upload size={18} /> Add Quiz
           </button>
+          <button type="button" onClick={() => { setActiveTab('quizzes'); setSelectedQuizDetail(null); setIsSidebarOpen(false); }} className={`nav-button ${activeTab === 'quizzes' ? 'nav-button-active' : ''}`}>
+            <BookOpen size={18} /> My Quizzes
+          </button>
         </nav>
 
         <button type="button" onClick={onLogout} style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '12px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>
@@ -215,8 +282,8 @@ export default function TeacherDashboard({ user, onLogout }) {
                 <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>{students.length}</div>
               </div>
               <div className="panel-card">
-                <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Quiz Types</div>
-                <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>4</div>
+                <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Assigned Quizzes</div>
+                <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>{assignedQuizCount}/4</div>
               </div>
               <div className="panel-card">
                 <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Latest Drill</div>
@@ -263,6 +330,106 @@ export default function TeacherDashboard({ user, onLogout }) {
               </div>
             </div>
           </>
+        )}
+
+        {activeTab === 'quizzes' && (
+          <div style={{ maxWidth: '960px' }}>
+            {!selectedQuizDetail ? (
+              <div className="panel-card">
+                <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <BookOpen size={20} color="#0284c7" /> Assigned Quiz Status
+                </h3>
+                <p style={{ color: '#64748b', margin: '0 0 24px 0', fontSize: '14px' }}>
+                  Review which disaster modules have quizzes assigned. Click an assigned quiz to view its questions.
+                </p>
+
+                {quizzesLoading ? (
+                  <p style={{ color: '#64748b' }}>Loading quiz status...</p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    {assignedQuizzes.map(quiz => {
+                      const option = getDisasterOption(quiz.disaster_type);
+                      const Icon = option?.icon || BookOpen;
+                      const isAssigned = quiz.status === 'assigned';
+
+                      return (
+                        <button
+                          key={quiz.disaster_type}
+                          type="button"
+                          disabled={!isAssigned}
+                          onClick={() => isAssigned && handleViewQuiz(quiz.disaster_type)}
+                          className={`quiz-status-card ${!isAssigned ? 'quiz-status-card-disabled' : ''}`}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: `${option?.color || '#0284c7'}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Icon size={22} color={option?.color || '#0284c7'} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                                <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px' }}>{option?.label || quiz.title}</div>
+                                <span className={`status-badge ${isAssigned ? 'status-assigned' : 'status-unassigned'}`}>
+                                  {isAssigned ? <CheckCircle2 size={14} /> : <CircleDashed size={14} />}
+                                  {isAssigned ? 'Assigned' : 'Not Assigned'}
+                                </span>
+                              </div>
+                              <div style={{ color: '#64748b', fontSize: '13px', marginBottom: '6px' }}>{quiz.title}</div>
+                              <div style={{ color: '#334155', fontSize: '13px', fontWeight: '600' }}>
+                                {isAssigned ? `${quiz.question_count} question${quiz.question_count === 1 ? '' : 's'}` : 'Upload a quiz from Add Quiz to assign this module'}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="panel-card">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuizDetail(null)}
+                  style={{ background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: 0, marginBottom: '18px', fontWeight: '600', fontSize: '14px' }}
+                >
+                  <ChevronLeft size={18} /> Back to quiz status
+                </button>
+
+                {quizDetailLoading ? (
+                  <p style={{ color: '#64748b' }}>Loading questions...</p>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '24px' }}>
+                      <h3 style={{ margin: '0 0 6px 0', fontSize: '22px', fontWeight: '700' }}>{selectedQuizDetail.title}</h3>
+                      <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+                        {getDisasterOption(selectedQuizDetail.disaster_type)?.label || selectedQuizDetail.disaster_type} • {selectedQuizDetail.questions.length} questions
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {selectedQuizDetail.questions.map((question, index) => (
+                        <div key={index} className="question-card">
+                          <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>
+                            Q{index + 1}. {question.question}
+                          </div>
+                          <div>
+                            {question.options.map((option, optionIndex) => (
+                              <span
+                                key={optionIndex}
+                                className={`option-pill ${optionIndex === question.answer ? 'option-pill-correct' : ''}`}
+                              >
+                                {answerLabel(optionIndex)}. {option}
+                                {optionIndex === question.answer ? ' ✓' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'quiz' && (

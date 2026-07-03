@@ -1,6 +1,6 @@
 from flask import request, jsonify
 
-from services import teacher_service
+from services import teacher_service, quiz_service
 from utils.helpers import get_json_body
 
 
@@ -49,3 +49,17 @@ def upload_quiz(teacherId):
     if error:
         return jsonify(error[0]), error[1]
     return jsonify(result)
+
+
+def list_quizzes(teacherId):
+    data, error = quiz_service.list_teacher_quizzes(teacherId)
+    if error:
+        return jsonify(error[0]), error[1]
+    return jsonify(data)
+
+
+def get_quiz(teacherId, disasterType):
+    data, error = quiz_service.get_quiz(teacherId, disasterType)
+    if error:
+        return jsonify(error[0]), error[1]
+    return jsonify(data)

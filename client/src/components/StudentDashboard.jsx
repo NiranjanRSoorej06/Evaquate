@@ -10,6 +10,9 @@ export default function StudentDashboard({ user, onLogout }) {
   const [isMobile, setIsMobile] = useState(false);
 
   // Quiz states
+  const [availableQuizzes, setAvailableQuizzes] = useState([]);
+  const [activeQuiz, setActiveQuiz] = useState(null);
+  const [quizPhase, setQuizPhase] = useState('browse');
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -52,7 +55,38 @@ export default function StudentDashboard({ user, onLogout }) {
     setActiveTab(null);
     setQuizFinished(false);
     setQuizQuestions([]);
+    setActiveQuiz(null);
+    setQuizPhase('browse');
+    setAvailableQuizzes([]);
   };
+
+  const fetchAvailableQuizzes = useCallback(async () => {
+    setQuizLoading(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/student/quizzes', { credentials: 'include' });
+      const data = await response.json();
+      setAvailableQuizzes(data.quizzes || []);
+    } catch (err) {
+      console.error(err);
+      setAvailableQuizzes([]);
+    } finally {
+      setQuizLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'quiz') {
+      setQuizPhase('browse');
+      setActiveQuiz(null);
+      setQuizQuestions([]);
+      setQuizFinished(false);
+      setCurrentQuestionIndex(0);
+      setSelectedAnswer(null);
+      setQuizCorrectCount(0);
+      setFinalPercentage(0);
+      fetchAvailableQuizzes();
+    }
+  }, [activeTab, fetchAvailableQuizzes]);
 
   const loadQuiz = async (type) => {
     if (!type) return;
@@ -65,13 +99,34 @@ export default function StudentDashboard({ user, onLogout }) {
     try {
       const response = await fetch(`http://localhost:3001/api/quizzes/${type}`, { credentials: 'include' });
       const data = await response.json();
-      setQuizQuestions(data.questions || []);
+      if (data?.questions?.length) {
+        setQuizQuestions(data.questions);
+        setQuizPhase('taking');
+        return true;
+      }
+      setQuizQuestions([]);
+      return false;
     } catch (err) {
       console.error(err);
+      setQuizQuestions([]);
+      return false;
     } finally {
       setQuizLoading(false);
     }
   };
+
+  const startQuiz = async (quiz) => {
+    if (!quiz?.disaster_type) return;
+    setActiveQuiz(quiz);
+    setSelectedDisaster(quiz.disaster_type);
+    const loaded = await loadQuiz(quiz.disaster_type);
+    if (!loaded) {
+      setQuizPhase('browse');
+      setActiveQuiz(null);
+    }
+  };
+
+  const getDisasterMeta = (disasterType) => disasters.find(d => d.id === disasterType);
 
   const handleAnswerSelect = (index) => setSelectedAnswer(index);
 
@@ -87,6 +142,7 @@ export default function StudentDashboard({ user, onLogout }) {
       const percentage = Math.round((nextCorrectCount / quizQuestions.length) * 100);
       setFinalPercentage(percentage);
       setQuizFinished(true);
+      setQuizPhase('finished');
       submitScore('quiz', percentage, 30);
     }
   };
@@ -134,6 +190,9 @@ export default function StudentDashboard({ user, onLogout }) {
         .quiz-option { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; text-align: left; cursor: pointer; transition: all 0.15s; font-size: 14px; font-family: inherit; }
         .quiz-option:hover { border-color: #0284c7; background: #f0f9ff; }
         .quiz-option-selected { background: #0284c7 !important; color: #fff !important; border-color: #0284c7 !important; }
+        .quiz-picker-card { width: 100%; text-align: left; border-radius: 16px; border: 1px solid #e2e8f0; background: #fff; padding: 18px; cursor: pointer; transition: all 0.15s ease; font-family: inherit; }
+        .quiz-picker-card:hover { border-color: #0284c7; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.08); transform: translateY(-1px); }
+        .quiz-picker-card-current { border-color: #bae6fd; background: #f0f9ff; }
         .data-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 600px; }
         .data-table th { padding: 16px; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; }
         .data-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; background: #fff; }
@@ -262,7 +321,7 @@ export default function StudentDashboard({ user, onLogout }) {
                     ].map(t => {
                       const Icon = t.icon;
                       return (
-                        <button key={t.id} onClick={() => { setActiveTab(t.id); if(t.id === 'quiz') loadQuiz(selectedDisaster); }} className={`activity-tab ${activeTab === t.id ? 'activity-tab-active' : ''}`}>
+                        <button key={t.id} onClick={() => setActiveTab(t.id)} className={`activity-tab ${activeTab === t.id ? 'activity-tab-active' : ''}`}>
                           <Icon size={22} color={activeTab === t.id ? '#0284c7' : '#94a3b8'} />
                           <div style={{ marginTop: '8px' }}>
                             <div style={{ fontWeight: '700', fontSize: '14px', color: activeTab === t.id ? '#0284c7' : '#1e293b' }}>{t.label}</div>
@@ -305,16 +364,75 @@ export default function StudentDashboard({ user, onLogout }) {
                       )}
 
                       {activeTab === 'quiz' && (
-                        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                          {quizLoading ? <p>Loading quiz questions... ⏳</p> : quizFinished ? (
+                        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+                          {quizLoading && quizPhase === 'browse' ? (
+                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading available quizzes... ⏳</p>
+                          ) : quizPhase === 'browse' ? (
+                            <>
+                              <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>
+                                {getDisasterMeta(selectedDisaster)?.label || selectedDisaster} Quiz 📝
+                              </h4>
+                              <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 20px 0' }}>
+                                Start the quiz your teacher uploaded for this module. It appears here as soon as it is uploaded.
+                              </p>
+                              {availableQuizzes.filter(quiz => quiz.disaster_type === selectedDisaster).length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                  {availableQuizzes
+                                    .filter(quiz => quiz.disaster_type === selectedDisaster)
+                                    .map(quiz => {
+                                      const meta = getDisasterMeta(quiz.disaster_type);
+                                      const Icon = meta?.icon || CheckSquare;
+                                      return (
+                                        <button
+                                          key={quiz.id || quiz.disaster_type}
+                                          type="button"
+                                          onClick={() => startQuiz(quiz)}
+                                          className="quiz-picker-card quiz-picker-card-current"
+                                        >
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: `${meta?.color || '#0284c7'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                              <Icon size={22} color={meta?.color || '#0284c7'} />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                              <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px', marginBottom: '4px' }}>{quiz.title}</div>
+                                              <div style={{ color: '#64748b', fontSize: '13px' }}>
+                                                {meta?.label || quiz.disaster_type} • {quiz.question_count} question{quiz.question_count === 1 ? '' : 's'}
+                                              </div>
+                                            </div>
+                                            <div style={{ color: '#0284c7', fontWeight: '700', fontSize: '13px', whiteSpace: 'nowrap' }}>Start →</div>
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                </div>
+                              ) : (
+                                <div style={{ textAlign: 'center', padding: '32px 16px', background: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+                                  <p style={{ color: '#64748b', margin: 0 }}>
+                                    No quiz available for {getDisasterMeta(selectedDisaster)?.label?.toLowerCase() || selectedDisaster} yet. Your teacher hasn&apos;t uploaded one for this module. 📋
+                                  </p>
+                                </div>
+                              )}
+                            </>
+                          ) : quizLoading ? (
+                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading quiz questions... ⏳</p>
+                          ) : quizPhase === 'finished' || quizFinished ? (
                             <div style={{ textAlign: 'center' }}>
                               <Award size={64} color="#0284c7" style={{ marginBottom: '16px' }} />
                               <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Awesome Job! 🎉</h2>
-                              <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0284c7', margin: '0 0 20px 0' }}>Your Score: {finalPercentage}%</h3>
-                              <button onClick={() => loadQuiz(selectedDisaster)} className="btn-primary">Try Again 🔄</button>
+                              <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0284c7', margin: '0 0 8px 0' }}>Your Score: {finalPercentage}%</h3>
+                              {activeQuiz?.title && <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>{activeQuiz.title}</p>}
+                              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <button onClick={() => activeQuiz && startQuiz(activeQuiz)} className="btn-primary">Try Again 🔄</button>
+                                <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(); }} className="btn-primary" style={{ background: '#e0f2fe', color: '#0284c7' }}>Back to Quiz 📚</button>
+                              </div>
                             </div>
                           ) : quizQuestions.length > 0 ? (
                             <>
+                              <div style={{ marginBottom: '20px' }}>
+                                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                                  {activeQuiz?.title || 'Knowledge Quiz'} • Question {currentQuestionIndex + 1} of {quizQuestions.length}
+                                </div>
+                              </div>
                               <h4 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#1e293b', margin: '0 0 24px 0' }}>🤔 {quizQuestions[currentQuestionIndex]?.question}</h4>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
                                 {quizQuestions[currentQuestionIndex]?.options?.map((opt, i) => (
@@ -324,7 +442,10 @@ export default function StudentDashboard({ user, onLogout }) {
                               <button disabled={selectedAnswer === null} onClick={handleNextQuestion} className="btn-primary" style={{ width: '100%' }}>Next Question ➡️</button>
                             </>
                           ) : (
-                            <p style={{ textAlign: 'center', color: '#64748b' }}>No questions available for this module yet. 📋</p>
+                            <div style={{ textAlign: 'center' }}>
+                              <p style={{ color: '#64748b', marginBottom: '16px' }}>This quiz is no longer available. Ask your teacher to upload it again. 📋</p>
+                              <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(); }} className="btn-primary">Back to Quizzes</button>
+                            </div>
                           )}
                         </div>
                       )}
