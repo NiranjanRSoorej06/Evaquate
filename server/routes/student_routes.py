@@ -14,10 +14,10 @@ def list_quizzes():
     return student_controller.list_quizzes()
 
 
-@student_bp.route('/api/quizzes/<disasterType>', methods=['GET'])
+@student_bp.route('/api/quizzes/<int:quizId>', methods=['GET'])
 @auth
-def get_quiz(disasterType):
-    return student_controller.get_quiz(disasterType)
+def get_quiz(quizId):
+    return student_controller.get_quiz(quizId)
 
 
 @student_bp.route('/api/student/score', methods=['POST'])
