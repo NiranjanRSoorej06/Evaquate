@@ -397,13 +397,13 @@ export default function Auth({ onLoginSuccess }) {
             <form onSubmit={handleSubmit} className="auth-horizontal-form">
               <div className="field-group">
                 <label className="field-label">
-                  <User size={13} color="#1d4ed8" /> Username / ID / Roll Number
+                  <User size={13} color="#1d4ed8" /> Username / Student ID
                 </label>
                 <div className="field-input-wrap">
                   <input
                     type="text"
                     className="field-input"
-                    placeholder="Enter your ID or roll number"
+                    placeholder="Teacher ID, school code, or student ID"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
@@ -413,13 +413,13 @@ export default function Auth({ onLoginSuccess }) {
 
               <div className="field-group">
                 <label className="field-label">
-                  <KeyRound size={13} color="#1d4ed8" /> Password / Full Name
+                  <KeyRound size={13} color="#1d4ed8" /> Password
                 </label>
                 <div className="field-input-wrap">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     className="field-input with-toggle"
-                    placeholder="Enter password or your full name"
+                    placeholder="Password (students: use your full name)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
