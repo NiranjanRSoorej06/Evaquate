@@ -67,6 +67,82 @@ def build_quiz_data(disaster_type, parsed_questions):
     return quiz_data
 
 
+DISASTER_TYPES = ('fire', 'earthquake', 'flood', 'landslide')
+
+
+def list_teacher_quizzes(teacher_id):
+    """List all disaster quiz slots with assigned/not_assigned status for a teacher."""
+    if not teacher_id:
+        return None, ({'message': 'Teacher not found'}, 404)
+
+    try:
+        quiz_res = quiz_model.find_all_by_teacher(teacher_id)
+        uploaded = {}
+
+        for row in quiz_res['rows']:
+            quiz_data = row.get('quiz_data') or {}
+            disaster_type = quiz_data.get('disaster')
+            if not disaster_type:
+                continue
+            uploaded[disaster_type] = {
+                'id': row.get('id'),
+                'title': quiz_data.get('title', ''),
+                'disaster_type': disaster_type,
+                'question_count': len(_question_keys(quiz_data)),
+                'status': 'assigned',
+            }
+
+        quizzes = []
+        for disaster_type in DISASTER_TYPES:
+            if disaster_type in uploaded:
+                quizzes.append(uploaded[disaster_type])
+            else:
+                quizzes.append({
+                    'disaster_type': disaster_type,
+                    'title': f'{disaster_type.title()} Safety Quiz',
+                    'question_count': 0,
+                    'status': 'not_assigned',
+                })
+
+        assigned_count = sum(1 for quiz in quizzes if quiz['status'] == 'assigned')
+        return {'quizzes': quizzes, 'assigned_count': assigned_count}, None
+    except Exception as e:
+        print('Error listing teacher quizzes', e)
+        return None, ({'message': 'Database error'}, 500)
+
+
+def list_available_quizzes(teacher_id):
+    """List only uploaded quizzes available to a student's teacher."""
+    if not teacher_id:
+        return {'quizzes': []}, None
+
+    try:
+        quiz_res = quiz_model.find_all_by_teacher(teacher_id)
+        quizzes = []
+
+        for row in quiz_res['rows']:
+            quiz_data = row.get('quiz_data') or {}
+            disaster_type = quiz_data.get('disaster')
+            if not disaster_type:
+                continue
+
+            question_count = len(_question_keys(quiz_data))
+            if question_count == 0:
+                continue
+
+            quizzes.append({
+                'id': row.get('id'),
+                'title': quiz_data.get('title', ''),
+                'disaster_type': disaster_type,
+                'question_count': question_count,
+            })
+
+        return {'quizzes': quizzes}, None
+    except Exception as e:
+        print('Error listing available quizzes', e)
+        return None, ({'message': 'Database error'}, 500)
+
+
 def get_quiz(teacher_id, disaster_type):
     """Get quiz questions for a teacher's disaster module.
 

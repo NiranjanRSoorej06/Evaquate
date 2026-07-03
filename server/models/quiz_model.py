@@ -1,6 +1,13 @@
 from utils.sql import sql
 
 
+def find_all_by_teacher(teacher_id):
+    return sql(
+        'SELECT * FROM quizzes WHERE teacher_id = $1 ORDER BY id ASC',
+        [teacher_id],
+    )
+
+
 def find_by_teacher_and_disaster(teacher_id, disaster_type):
     return sql(
         """SELECT * FROM quizzes

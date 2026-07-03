@@ -7,6 +7,13 @@ student_bp = Blueprint('student', __name__)
 auth = authenticate_token
 
 
+@student_bp.route('/api/student/quizzes', methods=['GET'])
+@auth
+@require_student
+def list_quizzes():
+    return student_controller.list_quizzes()
+
+
 @student_bp.route('/api/quizzes/<disasterType>', methods=['GET'])
 @auth
 def get_quiz(disasterType):
