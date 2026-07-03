@@ -50,8 +50,15 @@ def list_quizzes(teacherId):
     return teacher_controller.list_quizzes(teacherId)
 
 
-@teacher_bp.route('/api/teacher/<teacherId>/quizzes/<disasterType>', methods=['GET'])
+@teacher_bp.route('/api/teacher/<teacherId>/quizzes/<int:quizId>', methods=['GET'])
 @auth
 @tos
-def get_quiz(teacherId, disasterType):
-    return teacher_controller.get_quiz(teacherId, disasterType)
+def get_quiz(teacherId, quizId):
+    return teacher_controller.get_quiz(teacherId, quizId)
+
+
+@teacher_bp.route('/api/teacher/<teacherId>/quizzes/<int:quizId>', methods=['DELETE'])
+@auth
+@tos
+def delete_quiz(teacherId, quizId):
+    return teacher_controller.delete_quiz(teacherId, quizId)

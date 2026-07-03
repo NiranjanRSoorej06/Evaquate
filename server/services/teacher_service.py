@@ -115,13 +115,17 @@ def upload_quiz(file, disaster_type, teacher_id):
         if not questions:
             raise ValueError('No valid quiz questions were found in the CSV file.')
 
-        quiz_data = quiz_service.build_quiz_data(disaster_type, questions)
-        quiz_model.delete_by_teacher_and_disaster(teacher_id, disaster_type)
-        quiz_model.insert_quiz(teacher_id, json.dumps(quiz_data))
+        existing = quiz_model.find_all_by_teacher(teacher_id)
+        quiz_number = quiz_service.next_quiz_number(existing['rows'], disaster_type)
+        quiz_data = quiz_service.build_quiz_data(disaster_type, questions, quiz_number)
+        insert_res = quiz_model.insert_quiz(teacher_id, json.dumps(quiz_data))
+        created = insert_res['rows'][0]
 
         return {
             'success': True,
+            'id': created.get('id'),
             'disaster_type': disaster_type,
+            'label': f'Quiz {quiz_number}',
             'title': quiz_data.get('title'),
             'questions': quiz_service.quiz_data_to_questions(quiz_data),
         }, None
@@ -129,4 +133,16 @@ def upload_quiz(file, disaster_type, teacher_id):
         return None, ({'success': False, 'message': str(value_error)}, 400)
     except Exception as e:
         print('Error uploading quiz', e)
+        return None, ({'success': False, 'message': 'Database error'}, 500)
+
+
+def delete_quiz(teacher_id, quiz_id):
+    """Delete a quiz uploaded by the teacher."""
+    try:
+        result = quiz_model.delete_by_id(quiz_id, teacher_id)
+        if result['rowCount'] == 0:
+            return None, ({'success': False, 'message': 'Quiz not found.'}, 404)
+        return {'success': True}, None
+    except Exception as e:
+        print('Error deleting quiz', e)
         return None, ({'success': False, 'message': 'Database error'}, 500)

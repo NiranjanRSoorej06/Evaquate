@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, UserPlus, BarChart3, ShieldCheck, Menu, X, Upload, Flame, ShieldAlert, Waves, Mountain, BookOpen, ChevronLeft, CheckCircle2, CircleDashed } from 'lucide-react';
+import { Trash2, UserPlus, BarChart3, ShieldCheck, Menu, X, Upload, Flame, ShieldAlert, Waves, Mountain, BookOpen, ChevronLeft } from 'lucide-react';
 
 const disasterOptions = [
   { id: 'fire', label: 'Fire Safety', description: 'Fire escape and extinguisher basics', icon: Flame, color: '#ef4444' },
@@ -61,7 +61,7 @@ export default function TeacherDashboard({ user, onLogout }) {
       const data = await response.json();
       if (data?.quizzes) {
         setAssignedQuizzes(data.quizzes);
-        setAssignedQuizCount(data.assigned_count ?? data.quizzes.filter(q => q.status === 'assigned').length);
+        setAssignedQuizCount(data.assigned_count ?? data.quizzes.length);
       }
     } catch (err) {
       console.error('Error fetching teacher quizzes', err);
@@ -84,12 +84,12 @@ export default function TeacherDashboard({ user, onLogout }) {
 
   const getDisasterOption = (disasterType) => disasterOptions.find(option => option.id === disasterType);
 
-  const handleViewQuiz = async (disasterType) => {
+  const handleViewQuiz = async (quizId) => {
     if (!user?.id) return;
     setQuizDetailLoading(true);
     setSelectedQuizDetail(null);
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes/${disasterType}`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes/${quizId}`, { credentials: 'include' });
       const data = await response.json();
       if (data?.questions) {
         setSelectedQuizDetail(data);
@@ -100,6 +100,26 @@ export default function TeacherDashboard({ user, onLogout }) {
       setErrorMsg('Could not load quiz questions.');
     } finally {
       setQuizDetailLoading(false);
+    }
+  };
+
+  const handleDeleteQuiz = async (quizId, label) => {
+    if (!window.confirm(`Delete ${label || 'this quiz'}? Students will no longer see it.`)) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes/${quizId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg(`${label || 'Quiz'} deleted.`);
+        if (selectedQuizDetail?.id === quizId) setSelectedQuizDetail(null);
+        fetchTeacherQuizzes();
+      } else {
+        setErrorMsg(data.message || 'Could not delete quiz.');
+      }
+    } catch (err) {
+      setErrorMsg('Could not delete quiz.');
     }
   };
 
@@ -175,7 +195,7 @@ export default function TeacherDashboard({ user, onLogout }) {
       });
       const data = await response.json();
       if (data.success) {
-        setSuccessMsg(`Quiz uploaded for ${selectedDisaster}. Students can now access it.`);
+        setSuccessMsg(`${data.label || 'Quiz'} uploaded for ${selectedDisaster}. Students can now access it.`);
         setQuizFile(null);
         fetchTeacherQuizzes();
       } else {
@@ -217,6 +237,8 @@ export default function TeacherDashboard({ user, onLogout }) {
         .question-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
         .option-pill { display: inline-block; padding: 8px 12px; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0; font-size: 13px; margin: 4px 8px 4px 0; }
         .option-pill-correct { background: #dcfce7; border-color: #86efac; color: #166534; font-weight: 600; }
+        .quiz-list-item { display: flex; align-items: center; gap: 12px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; background: #fff; }
+        .quiz-list-actions { display: flex; gap: 8px; margin-left: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 12px 10px; color: #475569; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #e2e8f0; }
         td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
@@ -283,7 +305,7 @@ export default function TeacherDashboard({ user, onLogout }) {
               </div>
               <div className="panel-card">
                 <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Assigned Quizzes</div>
-                <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>{assignedQuizCount}/4</div>
+                <div style={{ fontSize: '30px', fontWeight: '700', color: '#0284c7', marginTop: '6px' }}>{assignedQuizCount}</div>
               </div>
               <div className="panel-card">
                 <div style={{ color: '#64748b', fontSize: '13px', fontWeight: '700' }}>Latest Drill</div>
@@ -338,50 +360,51 @@ export default function TeacherDashboard({ user, onLogout }) {
             {!selectedQuizDetail ? (
               <div className="panel-card">
                 <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <BookOpen size={20} color="#0284c7" /> Assigned Quiz Status
+                  <BookOpen size={20} color="#0284c7" /> My Quizzes
                 </h3>
                 <p style={{ color: '#64748b', margin: '0 0 24px 0', fontSize: '14px' }}>
-                  Review which disaster modules have quizzes assigned. Click an assigned quiz to view its questions.
+                  View or delete uploaded quizzes. You can upload multiple quizzes per disaster from Add Quiz.
                 </p>
 
                 {quizzesLoading ? (
-                  <p style={{ color: '#64748b' }}>Loading quiz status...</p>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
-                    {assignedQuizzes.map(quiz => {
-                      const option = getDisasterOption(quiz.disaster_type);
-                      const Icon = option?.icon || BookOpen;
-                      const isAssigned = quiz.status === 'assigned';
-
+                  <p style={{ color: '#64748b' }}>Loading quizzes...</p>
+                ) : assignedQuizzes.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {disasterOptions.map(option => {
+                      const moduleQuizzes = assignedQuizzes.filter(quiz => quiz.disaster_type === option.id);
+                      if (moduleQuizzes.length === 0) return null;
+                      const Icon = option.icon;
                       return (
-                        <button
-                          key={quiz.disaster_type}
-                          type="button"
-                          disabled={!isAssigned}
-                          onClick={() => isAssigned && handleViewQuiz(quiz.disaster_type)}
-                          className={`quiz-status-card ${!isAssigned ? 'quiz-status-card-disabled' : ''}`}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: `${option?.color || '#0284c7'}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <Icon size={22} color={option?.color || '#0284c7'} />
+                        <div key={option.id}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${option.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon size={18} color={option.color} />
                             </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
-                                <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px' }}>{option?.label || quiz.title}</div>
-                                <span className={`status-badge ${isAssigned ? 'status-assigned' : 'status-unassigned'}`}>
-                                  {isAssigned ? <CheckCircle2 size={14} /> : <CircleDashed size={14} />}
-                                  {isAssigned ? 'Assigned' : 'Not Assigned'}
-                                </span>
-                              </div>
-                              <div style={{ color: '#64748b', fontSize: '13px', marginBottom: '6px' }}>{quiz.title}</div>
-                              <div style={{ color: '#334155', fontSize: '13px', fontWeight: '600' }}>
-                                {isAssigned ? `${quiz.question_count} question${quiz.question_count === 1 ? '' : 's'}` : 'Upload a quiz from Add Quiz to assign this module'}
-                              </div>
-                            </div>
+                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>{option.label}</h4>
                           </div>
-                        </button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {moduleQuizzes.map(quiz => (
+                              <div key={quiz.id} className="quiz-list-item" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '15px' }}>{quiz.label || quiz.title}</div>
+                                  <div style={{ color: '#64748b', fontSize: '13px', marginTop: '4px' }}>
+                                    {quiz.question_count} question{quiz.question_count === 1 ? '' : 's'}
+                                  </div>
+                                </div>
+                                <div className="quiz-list-actions" style={{ display: 'flex', gap: '8px' }}>
+                                  <button type="button" onClick={() => handleViewQuiz(quiz.id)} className="btn-action" style={{ padding: '8px 14px', fontSize: '13px' }}>View</button>
+                                  <button type="button" onClick={() => handleDeleteQuiz(quiz.id, quiz.label)} className="btn-danger-outline" style={{ padding: '8px 14px', fontSize: '13px' }}>Delete</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       );
                     })}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '32px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                    <p style={{ color: '#64748b', margin: 0 }}>No quizzes uploaded yet. Use Add Quiz to upload your first one.</p>
                   </div>
                 )}
               </div>
@@ -392,7 +415,7 @@ export default function TeacherDashboard({ user, onLogout }) {
                   onClick={() => setSelectedQuizDetail(null)}
                   style={{ background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: 0, marginBottom: '18px', fontWeight: '600', fontSize: '14px' }}
                 >
-                  <ChevronLeft size={18} /> Back to quiz status
+                  <ChevronLeft size={18} /> Back to my quizzes
                 </button>
 
                 {quizDetailLoading ? (
@@ -400,7 +423,7 @@ export default function TeacherDashboard({ user, onLogout }) {
                 ) : (
                   <>
                     <div style={{ marginBottom: '24px' }}>
-                      <h3 style={{ margin: '0 0 6px 0', fontSize: '22px', fontWeight: '700' }}>{selectedQuizDetail.title}</h3>
+                      <h3 style={{ margin: '0 0 6px 0', fontSize: '22px', fontWeight: '700' }}>{selectedQuizDetail.label || selectedQuizDetail.title}</h3>
                       <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
                         {getDisasterOption(selectedQuizDetail.disaster_type)?.label || selectedQuizDetail.disaster_type} • {selectedQuizDetail.questions.length} questions
                       </p>
@@ -436,7 +459,7 @@ export default function TeacherDashboard({ user, onLogout }) {
         {activeTab === 'quiz' && (
           <div className="panel-card" style={{ maxWidth: '900px' }}>
             <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><Upload size={20} color="#0284c7" /> Add Quiz</h3>
-            <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>Choose a disaster module and upload a CSV file of quiz questions for your students.</p>
+            <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>Choose a disaster module and upload a CSV file. You can upload multiple quizzes (Quiz 1, Quiz 2, …) for the same disaster.</p>
 
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '16px', marginBottom: '22px' }}>
               {disasterOptions.map(option => (

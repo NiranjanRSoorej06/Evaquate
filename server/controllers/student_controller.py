@@ -4,9 +4,9 @@ from services import score_service, quiz_service, blueprint_service
 from utils.helpers import get_json_body
 
 
-def get_quiz(disasterType):
+def get_quiz(quizId):
     teacher_id = request.user.get('teacher_id')
-    data, error = quiz_service.get_quiz(teacher_id, disasterType)
+    data, error = quiz_service.get_quiz_by_id(teacher_id, quizId)
     if error:
         return jsonify(error[0]), error[1]
     return jsonify(data)
@@ -14,7 +14,8 @@ def get_quiz(disasterType):
 
 def list_quizzes():
     teacher_id = request.user.get('teacher_id')
-    data, error = quiz_service.list_available_quizzes(teacher_id)
+    disaster_type = request.args.get('disaster')
+    data, error = quiz_service.list_available_quizzes(teacher_id, disaster_type)
     if error:
         return jsonify(error[0]), error[1]
     return jsonify(data)

@@ -58,8 +58,15 @@ def list_quizzes(teacherId):
     return jsonify(data)
 
 
-def get_quiz(teacherId, disasterType):
-    data, error = quiz_service.get_quiz(teacherId, disasterType)
+def get_quiz(teacherId, quizId):
+    data, error = quiz_service.get_quiz_by_id(teacherId, quizId)
     if error:
         return jsonify(error[0]), error[1]
     return jsonify(data)
+
+
+def delete_quiz(teacherId, quizId):
+    result, error = teacher_service.delete_quiz(teacherId, quizId)
+    if error:
+        return jsonify(error[0]), error[1]
+    return jsonify(result)

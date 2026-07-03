@@ -60,10 +60,11 @@ export default function StudentDashboard({ user, onLogout }) {
     setAvailableQuizzes([]);
   };
 
-  const fetchAvailableQuizzes = useCallback(async () => {
+  const fetchAvailableQuizzes = useCallback(async (disasterType) => {
     setQuizLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/student/quizzes', { credentials: 'include' });
+      const query = disasterType ? `?disaster=${encodeURIComponent(disasterType)}` : '';
+      const response = await fetch(`http://localhost:3001/api/student/quizzes${query}`, { credentials: 'include' });
       const data = await response.json();
       setAvailableQuizzes(data.quizzes || []);
     } catch (err) {
@@ -75,7 +76,7 @@ export default function StudentDashboard({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'quiz') {
+    if (activeTab === 'quiz' && selectedDisaster) {
       setQuizPhase('browse');
       setActiveQuiz(null);
       setQuizQuestions([]);
@@ -84,12 +85,12 @@ export default function StudentDashboard({ user, onLogout }) {
       setSelectedAnswer(null);
       setQuizCorrectCount(0);
       setFinalPercentage(0);
-      fetchAvailableQuizzes();
+      fetchAvailableQuizzes(selectedDisaster);
     }
-  }, [activeTab, fetchAvailableQuizzes]);
+  }, [activeTab, selectedDisaster, fetchAvailableQuizzes]);
 
-  const loadQuiz = async (type) => {
-    if (!type) return;
+  const loadQuiz = async (quizId) => {
+    if (!quizId) return false;
     setQuizLoading(true);
     setQuizFinished(false);
     setCurrentQuestionIndex(0);
@@ -97,7 +98,7 @@ export default function StudentDashboard({ user, onLogout }) {
     setQuizCorrectCount(0);
     setFinalPercentage(0);
     try {
-      const response = await fetch(`http://localhost:3001/api/quizzes/${type}`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/quizzes/${quizId}`, { credentials: 'include' });
       const data = await response.json();
       if (data?.questions?.length) {
         setQuizQuestions(data.questions);
@@ -116,10 +117,10 @@ export default function StudentDashboard({ user, onLogout }) {
   };
 
   const startQuiz = async (quiz) => {
-    if (!quiz?.disaster_type) return;
+    if (!quiz?.id) return;
     setActiveQuiz(quiz);
     setSelectedDisaster(quiz.disaster_type);
-    const loaded = await loadQuiz(quiz.disaster_type);
+    const loaded = await loadQuiz(quiz.id);
     if (!loaded) {
       setQuizPhase('browse');
       setActiveQuiz(null);
@@ -373,18 +374,16 @@ export default function StudentDashboard({ user, onLogout }) {
                                 {getDisasterMeta(selectedDisaster)?.label || selectedDisaster} Quiz 📝
                               </h4>
                               <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 20px 0' }}>
-                                Start the quiz your teacher uploaded for this module. It appears here as soon as it is uploaded.
+                                Pick a quiz below to start. New uploads from your teacher appear here right away.
                               </p>
-                              {availableQuizzes.filter(quiz => quiz.disaster_type === selectedDisaster).length > 0 ? (
+                              {availableQuizzes.length > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                  {availableQuizzes
-                                    .filter(quiz => quiz.disaster_type === selectedDisaster)
-                                    .map(quiz => {
+                                  {availableQuizzes.map(quiz => {
                                       const meta = getDisasterMeta(quiz.disaster_type);
                                       const Icon = meta?.icon || CheckSquare;
                                       return (
                                         <button
-                                          key={quiz.id || quiz.disaster_type}
+                                          key={quiz.id}
                                           type="button"
                                           onClick={() => startQuiz(quiz)}
                                           className="quiz-picker-card quiz-picker-card-current"
@@ -394,7 +393,7 @@ export default function StudentDashboard({ user, onLogout }) {
                                               <Icon size={22} color={meta?.color || '#0284c7'} />
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                              <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px', marginBottom: '4px' }}>{quiz.title}</div>
+                                              <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px', marginBottom: '4px' }}>{quiz.label || quiz.title}</div>
                                               <div style={{ color: '#64748b', fontSize: '13px' }}>
                                                 {meta?.label || quiz.disaster_type} • {quiz.question_count} question{quiz.question_count === 1 ? '' : 's'}
                                               </div>
@@ -408,7 +407,7 @@ export default function StudentDashboard({ user, onLogout }) {
                               ) : (
                                 <div style={{ textAlign: 'center', padding: '32px 16px', background: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
                                   <p style={{ color: '#64748b', margin: 0 }}>
-                                    No quiz available for {getDisasterMeta(selectedDisaster)?.label?.toLowerCase() || selectedDisaster} yet. Your teacher hasn&apos;t uploaded one for this module. 📋
+                                    No quizzes available for {getDisasterMeta(selectedDisaster)?.label?.toLowerCase() || selectedDisaster} yet. Your teacher hasn&apos;t uploaded one for this module. 📋
                                   </p>
                                 </div>
                               )}
@@ -420,17 +419,17 @@ export default function StudentDashboard({ user, onLogout }) {
                               <Award size={64} color="#0284c7" style={{ marginBottom: '16px' }} />
                               <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Awesome Job! 🎉</h2>
                               <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0284c7', margin: '0 0 8px 0' }}>Your Score: {finalPercentage}%</h3>
-                              {activeQuiz?.title && <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>{activeQuiz.title}</p>}
+                              {activeQuiz?.label && <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>{activeQuiz.label}</p>}
                               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 <button onClick={() => activeQuiz && startQuiz(activeQuiz)} className="btn-primary">Try Again 🔄</button>
-                                <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(); }} className="btn-primary" style={{ background: '#e0f2fe', color: '#0284c7' }}>Back to Quiz 📚</button>
+                                <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(selectedDisaster); }} className="btn-primary" style={{ background: '#e0f2fe', color: '#0284c7' }}>Back to Quiz 📚</button>
                               </div>
                             </div>
                           ) : quizQuestions.length > 0 ? (
                             <>
                               <div style={{ marginBottom: '20px' }}>
                                 <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                                  {activeQuiz?.title || 'Knowledge Quiz'} • Question {currentQuestionIndex + 1} of {quizQuestions.length}
+                                  {activeQuiz?.label || activeQuiz?.title || 'Knowledge Quiz'} • Question {currentQuestionIndex + 1} of {quizQuestions.length}
                                 </div>
                               </div>
                               <h4 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#1e293b', margin: '0 0 24px 0' }}>🤔 {quizQuestions[currentQuestionIndex]?.question}</h4>
@@ -444,7 +443,7 @@ export default function StudentDashboard({ user, onLogout }) {
                           ) : (
                             <div style={{ textAlign: 'center' }}>
                               <p style={{ color: '#64748b', marginBottom: '16px' }}>This quiz is no longer available. Ask your teacher to upload it again. 📋</p>
-                              <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(); }} className="btn-primary">Back to Quizzes</button>
+                              <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(selectedDisaster); }} className="btn-primary">Back to Quizzes</button>
                             </div>
                           )}
                         </div>
