@@ -1,16 +1,15 @@
 from utils.sql import sql
 
 
-def find_by_credentials(roll_no, password):
+def find_by_credentials(student_id, password):
     return sql(
         """SELECT st.*, s.name as school_name, u.name as teacher_name, u.class_assigned
            FROM students st
            LEFT JOIN schools s ON st.school_id = s.id
            LEFT JOIN users u ON st.teacher_id = u.id
-           WHERE st.roll_no = $1
-             AND (LOWER(TRIM(st.password)) = LOWER(TRIM($2))
-                  OR LOWER(TRIM(st.name)) = LOWER(TRIM($2)))""",
-        [roll_no, password],
+           WHERE st.id = $1
+             AND LOWER(TRIM(st.password)) = LOWER(TRIM($2))""",
+        [student_id, password],
     )
 
 
