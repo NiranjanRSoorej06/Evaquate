@@ -17,6 +17,8 @@ export default function TeacherDashboard({ user, onLogout }) {
 
   const [studentName, setStudentName] = useState('');
   const [studentRollNo, setStudentRollNo] = useState('');
+  const [studentFile, setStudentFile] = useState(null);
+  const [uploadingStudents, setUploadingStudents] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedDisaster, setSelectedDisaster] = useState('fire');
@@ -172,6 +174,75 @@ export default function TeacherDashboard({ user, onLogout }) {
     }
   };
 
+  const downloadStudentTemplate = () => {
+    const csvContent = 'STUDENT NAME,ROLL NUMBER\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'student-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleStudentFileChange = (e) => {
+    setStudentFile(e.target.files?.[0] || null);
+  };
+
+  const handleImportStudents = async (e) => {
+    e.preventDefault();
+    if (!studentFile) {
+      setErrorMsg('Choose a student CSV or Excel file before uploading.');
+      return;
+    }
+
+    setUploadingStudents(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      if (!user?.school_id) {
+        setErrorMsg('Unable to determine your school. Please refresh the page.');
+        setUploadingStudents(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('student_file', studentFile);
+      formData.append('school_id', user.school_id);
+
+      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/students/import`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      const text = await response.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (parseErr) {
+        console.error('Student import parse error:', parseErr, text);
+      }
+
+      if (response.ok && data?.success) {
+        setSuccessMsg(`${data.addedCount} student(s) imported. ${data.skippedCount || 0} skipped.`);
+        setStudentFile(null);
+        fetchTeacherData();
+      } else {
+        const message = data?.message || text || response.statusText || 'Student import failed.';
+        setErrorMsg(message);
+      }
+    } catch (err) {
+      console.error('Student import error', err);
+      setErrorMsg('Could not upload the student file.');
+    } finally {
+      setUploadingStudents(false);
+    }
+  };
+
   const handleQuizUpload = async (e) => {
     e.preventDefault();
     if (!quizFile) {
@@ -324,6 +395,35 @@ export default function TeacherDashboard({ user, onLogout }) {
                   <div style={{ marginBottom: '20px' }}><label className="label-text">Roll Number</label><input type="text" className="form-control" value={studentRollNo} onChange={e => setStudentRollNo(e.target.value)} required /></div>
                   <button type="submit" className="btn-action" style={{ width: '100%' }}>Add Student</button>
                 </form>
+
+                <div style={{ marginTop: '28px' }}>
+                  <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><Upload size={20} color="#0284c7" /> Bulk Student Upload</h3>
+                  <p style={{ color: '#64748b', margin: '0 0 20px 0', fontSize: '14px' }}>
+                    Download a sample CSV, fill in rows, and upload it as CSV, XLS, or XLSX.
+                  </p>
+                  <button type="button" onClick={downloadStudentTemplate} className="btn-action" style={{ width: '100%', marginBottom: '16px' }}>
+                    Download student template
+                  </button>
+                  <form onSubmit={handleImportStudents}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label className="label-text">Upload student file</label>
+                      <input
+                        type="file"
+                        accept=".csv,.xls,.xlsx"
+                        onChange={handleStudentFileChange}
+                        className="form-control"
+                        style={{ padding: '10px 12px' }}
+                        required
+                      />
+                    </div>
+                    <div style={{ background: '#f8fafc', border: '1px dashed #bae6fd', borderRadius: '12px', padding: '14px 16px', color: '#0369a1', fontSize: '13px', marginBottom: '18px' }}>
+                      <strong>Required columns:</strong> STUDENT NAME, ROLL NUMBER
+                    </div>
+                    <button type="submit" className="btn-action" disabled={uploadingStudents} style={{ width: '100%' }}>
+                      {uploadingStudents ? 'Importing students...' : 'Upload student list'}
+                    </button>
+                  </form>
+                </div>
               </div>
 
               <div className="panel-card">
