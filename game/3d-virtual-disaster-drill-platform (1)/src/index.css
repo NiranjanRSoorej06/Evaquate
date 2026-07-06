@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-bg: #0A0F1D;
+  --color-brand-card: #0F172A;
+  --color-brand-card-hover: #1A2436;
+  --color-brand-canvas: #070B14;
+  --color-brand-cyan: #06B6D4;
+  --color-brand-cyan-glow: rgba(6, 182, 212, 0.3);
+  
+  --shadow-sleek-glow: 0 0 20px rgba(6, 182, 212, 0.15);
+  --shadow-sleek-glow-intense: 0 0 30px rgba(6, 182, 212, 0.3);
+  --shadow-red-glow: 0 0 20px rgba(244, 63, 94, 0.2);
+}
+
+/* Base style overrides for custom scrollbars and grid backgrounds */
+body {
+  background-color: #0A0F1D;
+  font-family: var(--font-sans);
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0F1D;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #06B6D4;
+}
+
+/* Sleek Radial Grid Accent */
+.sleek-radial-grid {
+  background-image: radial-gradient(#1e293b 1px, transparent 1px);
+  background-size: 24px 24px;
+}
