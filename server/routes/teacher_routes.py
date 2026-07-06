@@ -22,6 +22,13 @@ def add_student(teacherId):
     return teacher_controller.add_student(teacherId)
 
 
+@teacher_bp.route('/api/teacher/<teacherId>/students/import', methods=['POST'])
+@auth
+@tos
+def import_students(teacherId):
+    return teacher_controller.import_students(teacherId)
+
+
 @teacher_bp.route('/api/teacher/<teacherId>/students/bulk', methods=['POST'])
 @auth
 @tos

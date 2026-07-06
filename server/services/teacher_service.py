@@ -4,7 +4,7 @@ import traceback
 from models import student_model, score_model, quiz_model, user_model
 from services import quiz_service
 from utils.id_generator import build_student_id
-from utils.csv_parser import parse_quiz_csv
+from utils.csv_parser import parse_quiz_csv, parse_student_csv_or_excel
 
 
 def get_students_with_scores(teacher_id):
@@ -91,6 +91,11 @@ def bulk_import_students(teacher_id, students_list, school_id):
     except Exception as e:
         print('Error bulk importing students', e)
         return None, {'success': False, 'message': 'Database error'}
+
+
+def parse_student_upload(file_storage):
+    """Parse an uploaded CSV/XLS/XLSX student file and return a normalized student list."""
+    return parse_student_csv_or_excel(file_storage)
 
 
 def delete_student(student_id):
