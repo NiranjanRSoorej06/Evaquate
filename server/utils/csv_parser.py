@@ -1,6 +1,108 @@
 import re
 import csv
 import io
+import os
+
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None
+
+try:
+    import xlrd
+except ImportError:
+    xlrd = None
+
+
+def normalize_header(value):
+    return re.sub(r'[^a-z0-9]+', '', (value or '').strip().lower())
+
+
+def find_value(row, aliases):
+    for key, value in row.items():
+        if normalize_header(key) in aliases:
+            text = str(value or '').strip()
+            if text:
+                return text
+    return None
+
+
+def parse_student_rows(rows):
+    if not rows:
+        raise ValueError('Uploaded student file is empty or missing headers.')
+
+    students = []
+    for row in rows:
+        name = find_value(row, {'studentname', 'name', 'fullname', 'studentname', 'full name', 'student name'})
+        roll_no = find_value(row, {'rollnumber', 'rollno', 'roll number', 'roll', 'roll_number'})
+        if not name or not roll_no:
+            continue
+        students.append({'name': name, 'roll_no': roll_no})
+
+    if not students:
+        raise ValueError('No valid student rows were found in the uploaded file.')
+    return students
+
+
+def parse_csv_rows(file_storage):
+    content = file_storage.read().decode('utf-8-sig')
+    if not content.strip():
+        raise ValueError('CSV file is empty.')
+
+    reader = csv.DictReader(io.StringIO(content))
+    if not reader.fieldnames:
+        raise ValueError('CSV file must contain headers.')
+
+    return parse_student_rows(list(reader))
+
+
+def parse_excel_rows(file_bytes, extension):
+    if extension == '.xlsx':
+        if openpyxl is None:
+            raise ValueError('Server needs openpyxl to parse .xlsx files.')
+        workbook = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+        sheet = workbook.active
+        rows = list(sheet.iter_rows(values_only=True))
+    elif extension == '.xls':
+        if xlrd is None:
+            raise ValueError('Server needs xlrd to parse .xls files.')
+        workbook = xlrd.open_workbook(file_contents=file_bytes)
+        sheet = workbook.sheet_by_index(0)
+        rows = []
+        for row_index in range(sheet.nrows):
+            rows.append([sheet.cell_value(row_index, col_index) for col_index in range(sheet.ncols)])
+    else:
+        raise ValueError('Unsupported Excel format.')
+
+    if not rows:
+        raise ValueError('Excel file is empty.')
+
+    headers = [str(cell or '').strip() for cell in rows[0]]
+    data_rows = []
+    for row_values in rows[1:]:
+        row = {}
+        for index, header in enumerate(headers):
+            row[header] = row_values[index] if index < len(row_values) else ''
+        data_rows.append(row)
+
+    return parse_student_rows(data_rows)
+
+
+def parse_student_csv_or_excel(file_storage):
+    filename = getattr(file_storage, 'filename', '') or ''
+    extension = os.path.splitext(filename)[1].lower()
+    file_bytes = file_storage.read()
+    if extension == '.csv' or extension == '':
+        try:
+            text = file_bytes.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            text = file_bytes.decode('latin-1')
+        return parse_student_rows(list(csv.DictReader(io.StringIO(text))))
+
+    if extension in {'.xlsx', '.xls'}:
+        return parse_excel_rows(file_bytes, extension)
+
+    raise ValueError('Unsupported file type. Please upload a CSV, XLS or XLSX file.')
 
 
 def parse_quiz_csv(file_storage):
@@ -12,17 +114,6 @@ def parse_quiz_csv(file_storage):
     reader = csv.DictReader(io.StringIO(content))
     if not reader.fieldnames:
         raise ValueError('CSV file must contain headers.')
-
-    def normalize_header(value):
-        return re.sub(r'[^a-z0-9]+', '', (value or '').strip().lower())
-
-    def find_value(row, aliases):
-        for key in row.keys():
-            if normalize_header(key) in aliases:
-                value = str(row.get(key, '') or '').strip()
-                if value:
-                    return value
-        return None
 
     def find_option(row, label):
         for key in row.keys():
