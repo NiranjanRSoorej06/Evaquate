@@ -176,6 +176,21 @@ export default function StudentDashboard({ user, onLogout }) {
     { id: 'landslide', label: 'Landslide Safety', emoji: '🧗', icon: Mountain, color: '#8b5cf6', desc: 'Evacuate slide zones and follow shelter paths.' }
   ];
 
+  const awarenessVideos = [
+    {
+      id: 'video-1',
+      title: 'Campus Safety Awareness - Part 1',
+      description: 'Watch the first awareness video to understand key campus safety habits.',
+      src: '/videos/Students_walking_on_campus_202607071158.mp4'
+    },
+    {
+      id: 'video-2',
+      title: 'Campus Safety Awareness - Part 2',
+      description: 'Watch the second awareness video to reinforce safe behavior and disaster readiness.',
+      src: '/videos/Students_walking_on_campus_202607071158.mp4'
+    }
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'row', width: '100%', minHeight: '100vh', backgroundColor: '#f0f9ff', fontFamily: '"Plus Jakarta Sans", sans-serif', position: 'relative', overflowX: 'hidden' }}>
       
@@ -342,24 +357,28 @@ export default function StudentDashboard({ user, onLogout }) {
 
                       {activeTab === 'video' && (
                         <div style={{ textAlign: 'center', padding: '12px' }}>
-                          <div style={{ background: '#0f172a', borderRadius: '20px', padding: '40px 16px', color: '#fff' }}>
+                          <div style={{ background: '#0f172a', borderRadius: '20px', padding: '32px 16px', color: '#fff' }}>
                             <Video size={48} color="#38bdf8" style={{ marginBottom: '20px' }} />
-                            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '24px', margin: 0 }}>🚨 Essential {selectedDisaster} Protocols 📢</h3>
-                            <div style={{ textAlign: 'left', maxWidth: '500px', margin: '24px auto 0 auto', fontSize: '14px', background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', lineHeight: '1.8' }}>
-                              {selectedDisaster === 'fire' ? (
-                                <>
-                                  🏃 <b>Crawl low under smoke</b> to stay safe!<br/>
-                                  🤚 Use the <b>back of your hand</b> to check doors.<br/>
-                                  🧯 Remember <b>PASS</b> when using extinguishers.
-                                </>
-                              ) : (
-                                <>
-                                  🛑 <b>Drop, Cover, and Hold On!</b><br/>
-                                  🪟 Stay far away from windows and glass.<br/>
-                                  🚪 <b>Don't use elevators</b>—always use stairs.
-                                </>
-                              )}
-                            </div>
+                            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '18px', margin: 0 }}>🚨 Awareness Class: {getDisasterMeta(selectedDisaster)?.label || 'Safety'} 📺</h3>
+                            <p style={{ fontSize: '14px', color: '#cbd5e1', maxWidth: '600px', margin: '0 auto 26px auto', lineHeight: '1.8' }}>
+                              Watch both awareness videos for your disaster module. These are stock classroom videos built into the site and ready for all students to view.
+                            </p>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: '20px', marginTop: '24px' }}>
+                            {awarenessVideos.map(video => (
+                              <div key={video.id} style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e0f2fe', overflow: 'hidden', boxShadow: '0 8px 20px rgba(2, 132, 199, 0.08)' }}>
+                                <video
+                                  controls
+                                  style={{ width: '100%', height: 'auto', display: 'block', background: '#000' }}
+                                  src={video.src}
+                                />
+                                <div style={{ padding: '18px' }}>
+                                  <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 10px 0' }}>{video.title}</h4>
+                                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: '1.7' }}>{video.description}</p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
