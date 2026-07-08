@@ -215,6 +215,13 @@ export default function App() {
     disasterTypeRef.current = disasterType;
   }, [disasterType]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const student = params.get('student');
+    if (student) {
+      setStudentName(decodeURIComponent(student));
+    }
+  }, []);
 
   // Custom blueprint JSON upload
   const handleJSONUpload = (file: File) => {

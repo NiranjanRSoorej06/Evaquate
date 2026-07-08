@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Flame, ShieldAlert, Waves, Mountain, GraduationCap, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight, Menu, X } from 'lucide-react';
-import DrillGame from './DrillGame';
+
+const GAME_DISASTER_MAP = {
+  fire: 'fire',
+  earthquake: 'earthquake',
+  flood: 'flood',
+  landslide: 'earthquake',
+};
 
 export default function StudentDashboard({ user, onLogout }) {
   const [selectedDisaster, setSelectedDisaster] = useState(null); 
@@ -58,6 +64,17 @@ export default function StudentDashboard({ user, onLogout }) {
     setActiveQuiz(null);
     setQuizPhase('browse');
     setAvailableQuizzes([]);
+  };
+
+  const redirectToGameDrill = () => {
+    if (!selectedDisaster) return;
+    const baseUrl = import.meta.env.VITE_GAME_URL || 'http://localhost:3000';
+    const gameDisaster = GAME_DISASTER_MAP[selectedDisaster] || 'fire';
+    const params = new URLSearchParams({
+      disaster: gameDisaster,
+      student: user?.name || '',
+    });
+    window.open(`${baseUrl}?${params.toString()}`, '_blank', 'noopener,noreferrer');
   };
 
   const fetchAvailableQuizzes = useCallback(async (disasterType) => {
@@ -336,9 +353,38 @@ export default function StudentDashboard({ user, onLogout }) {
                   {/* Content View */}
                   {activeTab ? (
                     <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #eef2f6' }}>
-                      {activeTab === 'drill' && (
-                        <DrillGame schoolId={user?.school_id} disasterType={selectedDisaster} onFinish={(s, t, sc) => submitScore('drill', sc, t)} />
-                      )}
+                      {activeTab === 'drill' && (() => {
+                        const meta = getDisasterMeta(selectedDisaster);
+                        const Icon = meta?.icon || Gamepad2;
+                        return (
+                          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+                            <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>
+                              {meta?.label || selectedDisaster} Evacuation Drill 🎮
+                            </h4>
+                            <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 20px 0' }}>
+                              Launch the interactive safety simulator to practice live escape paths for this module.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={redirectToGameDrill}
+                              className="quiz-picker-card quiz-picker-card-current"
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: `${meta?.color || '#0284c7'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  <Icon size={22} color={meta?.color || '#0284c7'} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px', marginBottom: '4px' }}>Evacuation Drill 🎮</div>
+                                  <div style={{ color: '#64748b', fontSize: '13px' }}>
+                                    {meta?.label || selectedDisaster} • Interactive mock drill simulator
+                                  </div>
+                                </div>
+                                <div style={{ color: '#0284c7', fontWeight: '700', fontSize: '13px', whiteSpace: 'nowrap' }}>Start →</div>
+                              </div>
+                            </button>
+                          </div>
+                        );
+                      })()}
 
                       {activeTab === 'video' && (
                         <div style={{ textAlign: 'center', padding: '12px' }}>
