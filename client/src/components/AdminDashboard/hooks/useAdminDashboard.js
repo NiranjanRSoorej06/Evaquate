@@ -14,6 +14,8 @@ export function useAdminDashboard(user) {
   const [file, setFile] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processError, setProcessError] = useState('');
   const [selectedCellType, setSelectedCellType] = useState('wall');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -126,46 +128,170 @@ export function useAdminDashboard(user) {
   const handleFileUpload = (e) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setProcessError('');
     }
   };
 
-  const finalizeScan = useCallback(async () => {
-    if (!file) return;
-    try {
-      const formData = new FormData();
-      formData.append('blueprint', file);
-      const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-      const resData = await response.json();
-      if (resData.success) {
-        setIsScanning(false);
-        setFile(null);
-        setSuccessMsg('AI Floorplan scanning complete.');
-        fetchDashboardData();
-      }
-    } catch (err) {
-      setIsScanning(false);
-      setErrorMsg('Scan uploaded but mapping failed.');
+  // Process a SchoolLayout JSON file using the exact same logic as the Game Website's
+  // handleJSONUpload (game/src/App.tsx). Validates, normalizes defaults, and returns
+  // a complete SchoolLayout object ready for the backend.
+  const processSchoolLayoutJSON = (parsed) => {
+    // Validate minimum required fields
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Invalid JSON format. Expected a school layout object.');
     }
-  }, [file, user?.id, fetchDashboardData]);
+    if (!parsed.schoolName || typeof parsed.schoolName !== 'string') {
+      throw new Error('Missing or invalid "schoolName" property (must be a string).');
+    }
+    if (typeof parsed.floorsCount !== 'number' || parsed.floorsCount < 1) {
+      throw new Error('Missing or invalid "floorsCount" property (must be a positive number).');
+    }
+    if (!Array.isArray(parsed.rooms) || parsed.rooms.length === 0) {
+      throw new Error('Missing or empty "rooms" array.');
+    }
+
+    // Process and default missing values in rooms
+    const defaultColorMap = {
+      classroom: '#e0f2fe',
+      laboratory: '#f0fdf4',
+      library: '#fdf8f5',
+      office: '#fef2f2',
+      corridor: '#f1f5f9',
+      staircase: '#fffbeb',
+      emergency_exit: '#ecfdf5',
+      assembly_area: '#f0fdf4',
+      playground: '#f0fdf4',
+      restroom: '#fafaf9',
+      utility: '#f8fafc'
+    };
+
+    const processedRooms = parsed.rooms.map((room, index) => {
+      if (!room.id) room.id = `rm_custom_${index}`;
+      if (!room.name) room.name = `Room ${room.id.replace('rm_custom_', '')}`;
+      if (!room.type) room.type = 'classroom';
+      if (typeof room.x !== 'number' || typeof room.y !== 'number' ||
+          typeof room.width !== 'number' || typeof room.height !== 'number') {
+        throw new Error(`Room [${room.name || index}] is missing dimensions or coordinates (x, y, width, height must be numbers 0-100).`);
+      }
+      if (typeof room.floor !== 'number') room.floor = 1;
+      room.color = room.color || defaultColorMap[room.type] || '#f1f5f9';
+
+      // Default doors if not specified
+      if (!room.doors || !Array.isArray(room.doors)) {
+        room.doors = [{
+          id: `door_${room.id}_auto`,
+          x: Math.round(room.x + room.width / 2),
+          y: Math.round(room.y + room.height),
+          width: room.width > room.height ? 4 : 1,
+          height: room.width > room.height ? 1 : 4,
+          isOpen: true,
+          isBlocked: false
+        }];
+      } else {
+        room.doors = room.doors.map((door, dIndex) => ({
+          id: door.id || `door_${room.id}_${dIndex}`,
+          x: typeof door.x === 'number' ? door.x : room.x + room.width / 2,
+          y: typeof door.y === 'number' ? door.y : room.y + room.height,
+          width: typeof door.width === 'number' ? door.width : 4,
+          height: typeof door.height === 'number' ? door.height : 1,
+          isOpen: typeof door.isOpen === 'boolean' ? door.isOpen : true,
+          isBlocked: typeof door.isBlocked === 'boolean' ? door.isBlocked : false,
+          leadsTo: door.leadsTo || undefined
+        }));
+      }
+
+      // Default windows
+      if (!room.windows || !Array.isArray(room.windows)) {
+        room.windows = [];
+      } else {
+        room.windows = room.windows.map((win, wIndex) => ({
+          id: win.id || `win_${room.id}_${wIndex}`,
+          x: typeof win.x === 'number' ? win.x : room.x + room.width / 3,
+          y: typeof win.y === 'number' ? win.y : room.y,
+          width: typeof win.width === 'number' ? win.width : 4
+        }));
+      }
+
+      // Default furniture
+      if (!room.furniture || !Array.isArray(room.furniture)) {
+        room.furniture = [];
+      } else {
+        room.furniture = room.furniture.map((fur, fIndex) => ({
+          id: fur.id || `fur_${room.id}_${fIndex}`,
+          name: fur.name || 'Desk',
+          type: fur.type || 'desk',
+          x: typeof fur.x === 'number' ? fur.x : room.x + 2,
+          y: typeof fur.y === 'number' ? fur.y : room.y + 2,
+          width: typeof fur.width === 'number' ? fur.width : 3,
+          height: typeof fur.height === 'number' ? fur.height : 2,
+          canShelterUnder: typeof fur.canShelterUnder === 'boolean' ? fur.canShelterUnder : true
+        }));
+      }
+
+      return room;
+    });
+
+    // Process assemblyArea
+    let assemblyArea = parsed.assemblyArea;
+    if (!assemblyArea || typeof assemblyArea !== 'object') {
+      assemblyArea = { x: 80, y: 80, radius: 12, name: 'Designated Assembly Area' };
+    } else {
+      assemblyArea = {
+        x: typeof assemblyArea.x === 'number' ? assemblyArea.x : 80,
+        y: typeof assemblyArea.y === 'number' ? assemblyArea.y : 80,
+        radius: typeof assemblyArea.radius === 'number' ? assemblyArea.radius : 12,
+        name: assemblyArea.name || 'Safe Assembly Zone'
+      };
+    }
+
+    return {
+      schoolName: parsed.schoolName,
+      floorsCount: parsed.floorsCount,
+      rooms: processedRooms,
+      assemblyArea
+    };
+  };
 
   const startAIScan = () => {
     if (!file) return;
-    setIsScanning(true);
-    setScanProgress(0);
-    const interval = setInterval(() => {
-      setScanProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          finalizeScan();
-          return 100;
+    setIsProcessing(true);
+    setProcessError('');
+
+    const reader = new FileReader();
+    reader.readAsText(file);
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result;
+        const parsed = JSON.parse(text);
+
+        // Process using exact same logic as game website
+        const completeLayout = processSchoolLayoutJSON(parsed);
+
+        // Send processed layout to backend
+        const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ blueprint_json: completeLayout })
+        });
+        const resData = await response.json();
+        if (resData.success) {
+          setFile(null);
+          setSuccessMsg(`Blueprint loaded: ${completeLayout.schoolName} (${completeLayout.rooms.length} rooms, ${completeLayout.floorsCount} floor(s)).`);
+          fetchDashboardData();
+        } else {
+          setProcessError(resData.message || 'Failed to save blueprint.');
         }
-        return prev + 10;
-      });
-    }, 300);
+      } catch (err) {
+        setProcessError(err.message || 'Syntax error inside JSON file.');
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+    reader.onerror = () => {
+      setProcessError('Error reading JSON file.');
+      setIsProcessing(false);
+    };
   };
 
   const handleCellClick = async (rIndex, cIndex) => {
@@ -239,6 +365,8 @@ export function useAdminDashboard(user) {
     file,
     isScanning,
     scanProgress,
+    isProcessing,
+    processError,
     selectedCellType,
     setSelectedCellType,
     successMsg,

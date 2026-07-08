@@ -15,6 +15,8 @@ export default function OverviewTab(props) {
         handleCellClick={props.handleCellClick}
         handleWipeBlueprint={props.handleWipeBlueprint}
         isMobile={props.isMobile}
+        isProcessing={props.isProcessing}
+        processError={props.processError}
       />
     </>
   );
