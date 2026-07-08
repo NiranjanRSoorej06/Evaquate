@@ -3,29 +3,28 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type RoomType =
-  | 'classroom'
-  | 'laboratory'
-  | 'library'
-  | 'office'
-  | 'corridor'
-  | 'staircase'
-  | 'emergency_exit'
-  | 'assembly_area'
-  | 'playground'
-  | 'restroom'
-  | 'elevator'
-  | 'utility';
+export type DisasterType = 'earthquake' | 'fire' | 'flood' | 'gas_leak' | 'cyclone' | 'chemical_leak';
+
+export interface Furniture {
+  id: string;
+  name: string;
+  type: 'desk' | 'table' | 'shelf' | 'cabinet' | 'equipment';
+  x: number; // percentage 0-100 of floor
+  y: number; // percentage 0-100 of floor
+  width: number;
+  height: number;
+  canShelterUnder: boolean;
+}
 
 export interface Door {
   id: string;
-  x: number; // percentage coordinate 0-100 within floor or relative to room
-  y: number;
+  x: number; // percentage 0-100 of floor
+  y: number; // percentage 0-100 of floor
   width: number;
   height: number;
   isOpen: boolean;
-  leadsTo?: string; // Room ID
   isBlocked?: boolean;
+  leadsTo?: string; // room id
 }
 
 export interface Window {
@@ -35,134 +34,85 @@ export interface Window {
   width: number;
 }
 
-export interface Furniture {
-  id: string;
-  name: string;
-  type: 'desk' | 'table' | 'shelf' | 'cabinet' | 'equipment';
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  canShelterUnder: boolean;
-}
-
 export interface Room {
   id: string;
   name: string;
-  type: RoomType;
-  x: number; // x coordinate (0 to 100)
-  y: number; // y coordinate (0 to 100)
-  width: number; // width as % of layout
-  height: number; // height as % of layout
+  type: 'classroom' | 'laboratory' | 'library' | 'office' | 'corridor' | 'staircase' | 'emergency_exit' | 'assembly_area' | 'playground' | 'restroom' | 'utility';
+  x: number; // percentage 0-100 of floor
+  y: number; // percentage 0-100 of floor
+  width: number;
+  height: number;
   floor: number;
+  color: string;
   doors: Door[];
   windows: Window[];
   furniture: Furniture[];
-  color?: string;
 }
 
-export type DisasterType =
-  | 'earthquake'
-  | 'fire'
-  | 'flood'
-  | 'cyclone'
-  | 'chemical_leak'
-  | 'gas_leak';
-
-export interface Hazard {
-  id: string;
-  type: 'fire' | 'smoke' | 'debris' | 'water' | 'electrical' | 'chemical_gas' | 'blocked_corridor';
+export interface AssemblyArea {
   x: number;
   y: number;
-  floor: number;
   radius: number;
-  intensity: number; // 0 to 1
-  message?: string;
+  name: string;
 }
 
 export interface SchoolLayout {
   schoolName: string;
   floorsCount: number;
   rooms: Room[];
-  assemblyArea: {
-    x: number;
-    y: number;
-    radius: number;
-    name: string;
-  };
+  assemblyArea: AssemblyArea;
 }
 
-export interface Player {
-  id: string;
-  name: string;
-  role: 'student' | 'teacher' | 'principal' | 'security' | 'first_aid' | 'response_team';
-  x: number;
-  y: number;
+export interface Character {
+  x: number; // 0 to 100 on the floor
+  y: number; // 0 to 100 on the floor
   floor: number;
   health: number; // 0 - 100
-  oxygen: number; // 0 - 100
-  isDucked: boolean; // Cover under desk
-  hasGasMask: boolean;
-  hasExtinguisher: boolean;
-  hasFirstAidKit: boolean;
-  isEvacuated: boolean;
-  score: number;
-  xp: number;
-  statusLogs: string[];
+  lungSafety: number; // 0 - 100 (suffocation from smoke/gas)
+  isCrouching: boolean; // crawls under smoke, hides under desks
+  isCoveringMouth: boolean; // filters toxins, reduces speed
+  hasExtinguisher: boolean; // can put out nearby fire blocks
+  extinguisherCharges: number;
+  speed: number;
 }
 
-export interface NPC {
+export interface Hazard {
   id: string;
-  name: string;
-  role: 'student' | 'teacher' | 'staff';
-  x: number;
-  y: number;
+  type: 'fire' | 'smoke' | 'water' | 'gas' | 'chemical' | 'debris';
+  x: number; // 0-100 grid
+  y: number; // 0-100 grid
   floor: number;
-  health: number;
-  isInjured: boolean;
-  isSaved: boolean;
-  classroomID: string;
+  radius: number;
+  damagePerSec: number;
 }
 
-export interface ActionFeedback {
-  timestamp: string;
-  action: string;
-  scoreChange: number;
-  isCorrect: boolean;
-  explanation: string;
+export interface ActionLog {
+  time: number; // seconds elapsed
+  description: string;
+  type: 'info' | 'success' | 'warning' | 'danger';
+}
+
+export interface Objective {
+  id: string;
+  text: string;
+  isCompleted: boolean;
 }
 
 export interface DrillResult {
-  id: string;
   studentName: string;
-  date: string;
   disasterType: DisasterType;
-  timeTaken: number; // in seconds
+  timeTaken: number;
+  healthRemaining: number;
   score: number;
   maxScore: number;
-  healthRemaining: number;
   isSuccessful: boolean;
-  actions: ActionFeedback[];
-  feedbackSummary: string;
-  badgeEarned?: string;
+  actions: { timestamp: number; action: string; penaltyScore: number }[];
 }
 
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string; // Lucide icon name
-  xpReward: number;
-  unlocked: boolean;
-  unlockedAt?: string;
-}
-
-export interface LeaderboardEntry {
-  rank: number;
-  name: string;
-  class: string;
-  score: number;
-  xp: number;
-  drillsCompleted: number;
-  isUser?: boolean;
+export interface EvaluationData {
+  summary: string;
+  correctActions: string[];
+  criticalMistakes: string[];
+  tips: string[];
+  grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
 }

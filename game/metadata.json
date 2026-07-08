@@ -1,8 +1,6 @@
 {
-  "name": "3D Virtual Disaster Drill Platform",
-  "description": "A gamified 3D virtual campus twin for immersive, adaptive disaster preparedness drills converted from 2D blueprints.",
+  "name": "Disaster Drill Center",
+  "description": "An interactive 3D virtual disaster drill simulator that converts 2D campus blueprints into immersive emergency preparedness training environments.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
