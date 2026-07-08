@@ -1,67 +1,22 @@
 import os
 import sys
-import psycopg2
 from psycopg2 import pool
 from dotenv import load_dotenv
 
 load_dotenv()
 
-db_user = os.environ.get("DB_USER")
-db_password = os.environ.get("DB_PASSWORD")
-db_host = os.environ.get("DB_HOST")
-db_port = int(os.environ.get("DB_PORT", 5432))
-db_name = os.environ.get("DB_NAME")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL not found in .env")
 
 def init():
-    # Connect to default postgres database
-    print("Connecting to default postgres database...")
-
-    try:
-        conn = psycopg2.connect(
-            user=db_user,
-            password=db_password,
-            host=db_host,
-            port=db_port,
-            database="postgres",
-        )
-        conn.autocommit = True
-        cur = conn.cursor()
-
-        # Check if database exists
-        cur.execute(
-            "SELECT 1 FROM pg_database WHERE datname = %s",
-            (db_name,)
-        )
-
-        if cur.fetchone() is None:
-            print(f'Database "{db_name}" does not exist. Creating...')
-            cur.execute(f'CREATE DATABASE "{db_name}"')
-            print(f'Database "{db_name}" created successfully.')
-        else:
-            print(f'Database "{db_name}" already exists.')
-
-    except Exception as e:
-        print("Error ensuring database exists:", e)
-        sys.exit(1)
-
-    finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
-
-    # Connect to target database
-    print(f'Connecting to database "{db_name}"...')
-
+    print("Connecting to Neon PostgreSQL...")
+    
     target_pool = pool.SimpleConnectionPool(
         1,
         20,
-        user=db_user,
-        password=db_password,
-        host=db_host,
-        port=db_port,
-        database=db_name,
+        dsn=DATABASE_URL,
     )
 
     target_conn = target_pool.getconn()
