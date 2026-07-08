@@ -41,8 +41,14 @@ def delete_teacher(schoolId, teacherId):
 
 
 def upload_blueprint(schoolId):
-    uploaded_file = request.files.get('blueprint')
-    result, error = blueprint_service.upload_blueprint(schoolId, uploaded_file)
+    # First try JSON body (new SchoolLayout format from JSON file upload)
+    body = get_json_body()
+    if body and body.get('blueprint_json'):
+        result, error = blueprint_service.upload_blueprint(schoolId, None, blueprint_json=body['blueprint_json'])
+    else:
+        # Fall back to multipart file upload (legacy image path)
+        uploaded_file = request.files.get('blueprint')
+        result, error = blueprint_service.upload_blueprint(schoolId, uploaded_file)
     if error:
         status = 404 if error.get('message') == 'School not found' else 500
         return jsonify(error), status
@@ -57,3 +63,23 @@ def update_blueprint(schoolId):
         status = 404 if error.get('message') == 'School not found' else 500
         return jsonify(error), status
     return jsonify({'success': True, 'blueprint_json': result})
+
+
+def get_public_blueprint(schoolId):
+    """Public endpoint (no auth) for the game to fetch a school's blueprint."""
+    blueprint, error = blueprint_service.get_school_map(schoolId)
+    if error:
+        status = error[1] if isinstance(error, tuple) and len(error) > 1 else 404
+        return jsonify(error[0] if isinstance(error, tuple) else error), status
+
+    # Some psycopg2 configurations return JSONB columns as a raw JSON string
+    # instead of a parsed dict.  If that happens, parse it so jsonify returns
+    # a proper JSON object (not a double-encoded string).
+    if isinstance(blueprint, str):
+        import json as _json
+        try:
+            blueprint = _json.loads(blueprint)
+        except (ValueError, TypeError):
+            pass
+
+    return jsonify(blueprint)

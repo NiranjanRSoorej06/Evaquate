@@ -6,8 +6,14 @@ from config import UPLOAD_DIR
 from models import school_model
 
 
-def upload_blueprint(school_id, uploaded_file):
-    """Upload a blueprint file and generate a simulated AI floor plan.
+def upload_blueprint(school_id, uploaded_file, blueprint_json=None):
+    """Upload a blueprint file and generate a simulated AI floor plan,
+    or store a pre-processed SchoolLayout JSON directly.
+
+    Args:
+        school_id: The school identifier.
+        uploaded_file: A multipart file upload (legacy image path).
+        blueprint_json: A pre-processed SchoolLayout dict (from JSON file upload).
 
     Returns:
         (result_dict, None) on success
@@ -18,7 +24,17 @@ def upload_blueprint(school_id, uploaded_file):
         if school_check['rowCount'] == 0:
             return None, {'success': False, 'message': 'School not found'}
 
-        # Handle file upload (multer equivalent)
+        # If a pre-processed JSON layout was provided (from game-format JSON upload),
+        # store it directly without simulating a grid.
+        if blueprint_json:
+            school_model.update_blueprint(school_id, blueprint_json)
+            return {
+                'success': True,
+                'message': 'SchoolLayout blueprint saved successfully.',
+                'blueprint_json': blueprint_json,
+            }, None
+
+        # Legacy path: handle file upload (multer equivalent)
         if uploaded_file:
             filename = secrets.token_hex(16)
             uploaded_file.save(os.path.join(UPLOAD_DIR, filename))

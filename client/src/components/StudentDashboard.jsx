@@ -73,6 +73,7 @@ export default function StudentDashboard({ user, onLogout }) {
     const params = new URLSearchParams({
       disaster: gameDisaster,
       student: user?.name || '',
+      school: user?.school_id || '',
     });
     window.open(`${baseUrl}?${params.toString()}`, '_blank', 'noopener,noreferrer');
   };
