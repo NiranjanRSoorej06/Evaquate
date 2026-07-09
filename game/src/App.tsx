@@ -1086,6 +1086,12 @@ export default function App() {
                     {/* Footer Close/Restart */}
                     <div className="flex justify-end gap-3 border-t-2 border-slate-100 pt-4">
                       <button
+                        onClick={() => window.close()}
+                        className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-2xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                      >
+                        BACK TO DASHBOARD
+                      </button>
+                      <button
                         onClick={handleResetDrill}
                         className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-500/10"
                       >
