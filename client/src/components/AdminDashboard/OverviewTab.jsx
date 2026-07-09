@@ -1,10 +1,12 @@
 import MetricsGrid from './MetricsGrid';
 import BlueprintPanel from './BlueprintPanel';
+import ImageToJsonConverter from './ImageToJsonConverter';
 
 export default function OverviewTab(props) {
   return (
     <>
       <MetricsGrid data={props.data} />
+      <ImageToJsonConverter user={props.user} />
       <BlueprintPanel
         data={props.data}
         file={props.file}
@@ -15,6 +17,8 @@ export default function OverviewTab(props) {
         handleCellClick={props.handleCellClick}
         handleWipeBlueprint={props.handleWipeBlueprint}
         isMobile={props.isMobile}
+        isProcessing={props.isProcessing}
+        processError={props.processError}
       />
     </>
   );

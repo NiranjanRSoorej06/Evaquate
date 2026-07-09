@@ -16,14 +16,13 @@ import {
   Skull, 
   Volume2, 
   VolumeX, 
-  FileUp, 
   Play, 
   RotateCcw, 
-  HelpCircle, 
   Activity,
   AlertTriangle,
   School,
-  ChevronRight
+  ChevronRight,
+  MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -158,8 +157,8 @@ export default function App() {
   });
   const [uploading, setUploading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const jsonInputRef = useRef<HTMLInputElement | null>(null);
-  const [showJSONGuide, setShowJSONGuide] = useState<boolean>(false);
+  const [blueprintLoading, setBlueprintLoading] = useState<boolean>(false);
+  const [pendingDisaster, setPendingDisaster] = useState<DisasterType | null>(null);
   
   // Character active state
   const [character, setCharacter] = useState<Character>({
@@ -215,273 +214,58 @@ export default function App() {
     disasterTypeRef.current = disasterType;
   }, [disasterType]);
 
-
-  // Custom blueprint JSON upload
-  const handleJSONUpload = (file: File) => {
-    if (!file) return;
-    try {
-      setUploading(true);
-      setErrorMsg(null);
-
-      const reader = new FileReader();
-      reader.readAsText(file);
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result as string;
-          const parsed = JSON.parse(text);
-
-          // Validate minimum required fields
-          if (!parsed || typeof parsed !== 'object') {
-            throw new Error('Invalid JSON format. Expected a school layout object.');
-          }
-
-          if (!parsed.schoolName || typeof parsed.schoolName !== 'string') {
-            throw new Error('Missing or invalid "schoolName" property (must be a string).');
-          }
-
-          if (typeof parsed.floorsCount !== 'number' || parsed.floorsCount < 1) {
-            throw new Error('Missing or invalid "floorsCount" property (must be a positive number).');
-          }
-
-          if (!Array.isArray(parsed.rooms) || parsed.rooms.length === 0) {
-            throw new Error('Missing or empty "rooms" array.');
-          }
-
-          // Process and default missing values in rooms
-          const defaultColorMap: Record<string, string> = {
-            classroom: '#e0f2fe',
-            laboratory: '#f0fdf4',
-            library: '#fdf8f5',
-            office: '#fef2f2',
-            corridor: '#f1f5f9',
-            staircase: '#fffbeb',
-            emergency_exit: '#ecfdf5',
-            assembly_area: '#f0fdf4',
-            playground: '#f0fdf4',
-            restroom: '#fafaf9',
-            utility: '#f8fafc'
-          };
-
-          const processedRooms = parsed.rooms.map((room: any, index: number) => {
-            if (!room.id) {
-              room.id = `rm_custom_${index}`;
-            }
-            if (!room.name) {
-              room.name = `Room ${room.id.replace('rm_custom_', '')}`;
-            }
-            if (!room.type) {
-              room.type = 'classroom';
-            }
-            if (typeof room.x !== 'number' || typeof room.y !== 'number' || typeof room.width !== 'number' || typeof room.height !== 'number') {
-              throw new Error(`Room [${room.name || index}] is missing dimensions or coordinates (x, y, width, height must be numbers 0-100).`);
-            }
-            if (typeof room.floor !== 'number') {
-              room.floor = 1;
-            }
-
-            room.color = room.color || defaultColorMap[room.type] || '#f1f5f9';
-            
-            // Default doors if not specified
-            if (!room.doors || !Array.isArray(room.doors)) {
-              room.doors = [
-                {
-                  id: `door_${room.id}_auto`,
-                  x: Math.round(room.x + room.width / 2),
-                  y: Math.round(room.y + room.height),
-                  width: room.width > room.height ? 4 : 1,
-                  height: room.width > room.height ? 1 : 4,
-                  isOpen: true,
-                  isBlocked: false
-                }
-              ];
-            } else {
-              room.doors = room.doors.map((door: any, dIndex: number) => ({
-                id: door.id || `door_${room.id}_${dIndex}`,
-                x: typeof door.x === 'number' ? door.x : room.x + room.width / 2,
-                y: typeof door.y === 'number' ? door.y : room.y + room.height,
-                width: typeof door.width === 'number' ? door.width : 4,
-                height: typeof door.height === 'number' ? door.height : 1,
-                isOpen: typeof door.isOpen === 'boolean' ? door.isOpen : true,
-                isBlocked: typeof door.isBlocked === 'boolean' ? door.isBlocked : false,
-                leadsTo: door.leadsTo || undefined
-              }));
-            }
-
-            // Default windows
-            if (!room.windows || !Array.isArray(room.windows)) {
-              room.windows = [];
-            } else {
-              room.windows = room.windows.map((win: any, wIndex: number) => ({
-                id: win.id || `win_${room.id}_${wIndex}`,
-                x: typeof win.x === 'number' ? win.x : room.x + room.width / 3,
-                y: typeof win.y === 'number' ? win.y : room.y,
-                width: typeof win.width === 'number' ? win.width : 4
-              }));
-            }
-
-            // Default furniture
-            if (!room.furniture || !Array.isArray(room.furniture)) {
-              room.furniture = [];
-            } else {
-              room.furniture = room.furniture.map((fur: any, fIndex: number) => ({
-                id: fur.id || `fur_${room.id}_${fIndex}`,
-                name: fur.name || 'Desk',
-                type: fur.type || 'desk',
-                x: typeof fur.x === 'number' ? fur.x : room.x + 2,
-                y: typeof fur.y === 'number' ? fur.y : room.y + 2,
-                width: typeof fur.width === 'number' ? fur.width : 3,
-                height: typeof fur.height === 'number' ? fur.height : 2,
-                canShelterUnder: typeof fur.canShelterUnder === 'boolean' ? fur.canShelterUnder : true
-              }));
-            }
-
-            return room;
-          });
-
-          // Process assemblyArea
-          let assemblyArea = parsed.assemblyArea;
-          if (!assemblyArea || typeof assemblyArea !== 'object') {
-            assemblyArea = {
-              x: 80,
-              y: 80,
-              radius: 12,
-              name: 'Designated Assembly Area'
-            };
-          } else {
-            assemblyArea = {
-              x: typeof assemblyArea.x === 'number' ? assemblyArea.x : 80,
-              y: typeof assemblyArea.y === 'number' ? assemblyArea.y : 80,
-              radius: typeof assemblyArea.radius === 'number' ? assemblyArea.radius : 12,
-              name: assemblyArea.name || 'Safe Assembly Zone'
-            };
-          }
-
-          const completeLayout: SchoolLayout = {
-            schoolName: parsed.schoolName,
-            floorsCount: parsed.floorsCount,
-            rooms: processedRooms,
-            assemblyArea
-          };
-
-          setCurrentLayout(completeLayout);
-          
-          // Reposition character to a valid starting room (prefer a classroom on floor 1 or first room in the array)
-          const firstFloorRoom = processedRooms.find((r: any) => r.floor === 1) || processedRooms[0];
-          if (firstFloorRoom) {
-            setCharacter(prev => ({
-              ...prev,
-              floor: firstFloorRoom.floor,
-              x: Math.round(firstFloorRoom.x + firstFloorRoom.width / 2),
-              y: Math.round(firstFloorRoom.y + firstFloorRoom.height / 2)
-            }));
-          }
-
-          addActionLog(`JSON IMPORT: Redesigned map dynamically to [${completeLayout.schoolName}]!`, 'success');
-          setUploading(false);
-        } catch (err: any) {
-          setErrorMsg(err.message || 'Syntax error inside JSON file.');
-          setUploading(false);
-        }
-      };
-      reader.onerror = () => {
-        setErrorMsg('Error reading custom layout JSON file.');
-        setUploading(false);
-      };
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to process custom map design JSON.');
-      setUploading(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const student = params.get('student');
+    if (student) {
+      setStudentName(decodeURIComponent(student));
     }
-  };
+
+    // Read disaster type from URL params (assigned by Guardian AI)
+    const disaster = params.get('disaster') as DisasterType | null;
+    if (disaster) {
+      setPendingDisaster(disaster);
+    }
+
+    // Auto-fetch school blueprint from Guardian AI backend
+    const schoolId = params.get('school');
+    if (schoolId) {
+      setBlueprintLoading(true);
+      fetch(`http://localhost:3001/api/public/school/${schoolId}/blueprint`)
+        .then(res => res.json())
+        .then(data => {
+          // Handle case where backend returns a JSON string instead of object
+          let layout = data;
+          if (typeof data === 'string') {
+            try { layout = JSON.parse(data); } catch { layout = null; }
+          }
+          if (layout && layout.schoolName && Array.isArray(layout.rooms) && layout.rooms.length > 0) {
+            setCurrentLayout(layout);
+            const firstFloorRoom = layout.rooms.find((r: Room) => r.floor === 1) || layout.rooms[0];
+            if (firstFloorRoom) {
+              setCharacter(prev => ({
+                ...prev,
+                floor: firstFloorRoom.floor,
+                x: Math.round(firstFloorRoom.x + firstFloorRoom.width / 2),
+                y: Math.round(firstFloorRoom.y + firstFloorRoom.height / 2)
+              }));
+            }
+          } else {
+            setErrorMsg('No school blueprint found. Please ask your admin to upload one.');
+          }
+          setBlueprintLoading(false);
+        })
+        .catch((err) => {
+          console.error('Blueprint fetch error:', err);
+          setErrorMsg('Could not load school blueprint from server.');
+          setBlueprintLoading(false);
+        });
+    }
+  }, []);
 
   const toggleSound = () => {
     setSoundEnabled(!soundEnabled);
     audioEngine.setMute(soundEnabled);
-  };
-
-  const handleDownloadSampleJSON = () => {
-    const sample = {
-      schoolName: "Sunny Valley Academy (Dynamic Layout)",
-      floorsCount: 2,
-      rooms: [
-        {
-          id: "rm_sv_101",
-          name: "Classroom 101 - Math Wing",
-          type: "classroom",
-          x: 10,
-          y: 10,
-          width: 25,
-          height: 30,
-          floor: 1,
-          color: "#e0f2fe",
-          doors: [
-            { id: "door_sv_1", x: 22, y: 40, width: 4, height: 1, isOpen: true }
-          ],
-          windows: [
-            { id: "win_sv_1", x: 15, y: 10, width: 4 }
-          ],
-          furniture: [
-            { id: "fur_sv_1", name: "Teacher Desk", type: "table", x: 13, y: 15, width: 3, height: 2, canShelterUnder: true },
-            { id: "fur_sv_2", name: "Student Double Desks", type: "desk", x: 13, y: 24, width: 4, height: 3, canShelterUnder: true }
-          ]
-        },
-        {
-          id: "rm_sv_lab",
-          name: "Curie Chemistry Lab",
-          type: "laboratory",
-          x: 38,
-          y: 10,
-          width: 24,
-          height: 30,
-          floor: 1,
-          color: "#f0fdf4",
-          doors: [
-            { id: "door_sv_2", x: 50, y: 40, width: 4, height: 1, isOpen: false }
-          ],
-          windows: [],
-          furniture: [
-            { id: "fur_sv_lab_1", name: "Lab Workbench", type: "equipment", x: 42, y: 16, width: 6, height: 3, canShelterUnder: true }
-          ]
-        },
-        {
-          id: "rm_sv_stairs",
-          name: "Stairwell West",
-          type: "staircase",
-          x: 65,
-          y: 10,
-          width: 12,
-          height: 30,
-          floor: 1,
-          color: "#fffbeb"
-        },
-        {
-          id: "rm_sv_exit",
-          name: "Emergency Exit Route",
-          type: "emergency_exit",
-          x: 80,
-          y: 10,
-          width: 15,
-          height: 30,
-          floor: 1,
-          color: "#ecfdf5",
-          doors: [
-            { id: "door_sv_exit", x: 87, y: 40, width: 4, height: 1, isOpen: true }
-          ]
-        }
-      ],
-      assemblyArea: {
-        x: 88,
-        y: 80,
-        radius: 12,
-        name: "Main Sports Assembly Field"
-      }
-    };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sample, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "sunny_valley_academy_map.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
   };
 
   // Time logging helper
@@ -979,54 +763,43 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* SCHOOL CAMPUS SELECTOR */}
+                {/* SCHOOL CAMPUS BLUEPRINT STATUS */}
                 <div className="bg-white border-4 border-amber-100 p-5 rounded-3xl shadow-md">
                   <label className="text-xs font-black text-amber-800 uppercase tracking-wider block mb-2.5 font-display">
-                    🏫 2. UPLOAD YOUR SCHOOL MAP (JSON)
+                    🏫 2. YOUR SCHOOL CAMPUS MAP
                   </label>
-                  
-                  {/* JSON Upload */}
-                  <div
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                        handleJSONUpload(e.dataTransfer.files[0]);
-                      }
-                    }}
-                    onClick={() => jsonInputRef.current?.click()}
-                    className="border-2 border-dashed border-amber-200 hover:border-amber-400 rounded-2xl p-4 text-center cursor-pointer hover:bg-amber-50/40 transition flex flex-col items-center justify-center gap-1 min-h-[90px] shadow-sm relative group"
-                  >
-                    <FileUp className="w-6 h-6 text-amber-500 group-hover:scale-110 transition duration-300" />
-                    <span className="text-[11px] text-amber-950 font-extrabold block">
-                      Dynamic JSON Designer 🗺️
-                    </span>
-                    <span className="text-[9px] text-slate-500 font-bold leading-normal">
-                      Drop map.json or click to browse
-                    </span>
-                    <input
-                      type="file"
-                      ref={jsonInputRef}
-                      className="hidden"
-                      accept=".json,application/json"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleJSONUpload(e.target.files[0]);
-                        }
-                      }}
-                    />
-                  </div>
 
-                  {/* Format Guide Button */}
-                  <div className="flex justify-end mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowJSONGuide(true)}
-                      className="text-[10px] text-amber-700 hover:text-amber-900 font-black uppercase tracking-wider flex items-center gap-1 px-2.5 py-1.5 bg-amber-50/60 hover:bg-amber-100/80 rounded-xl border border-amber-200/50 transition cursor-pointer"
-                    >
-                      💡 VIEW MAP JSON FORMAT GUIDE & TEMPLATE
-                    </button>
-                  </div>
+                  {blueprintLoading ? (
+                    <div className="flex flex-col items-center justify-center gap-2 min-h-[90px] border-2 border-amber-200 rounded-2xl bg-amber-50/40 p-4">
+                      <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
+                      <span className="text-[11px] text-amber-950 font-extrabold block">
+                        Loading school blueprint...
+                      </span>
+                      <span className="text-[9px] text-slate-500 font-bold leading-normal">
+                        Fetching campus layout from Guardian AI server
+                      </span>
+                    </div>
+                  ) : currentLayout.rooms.length > 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 min-h-[90px] border-2 border-emerald-200 rounded-2xl bg-emerald-50/40 p-4">
+                      <MapPin className="w-6 h-6 text-emerald-500" />
+                      <span className="text-[11px] text-emerald-950 font-extrabold block">
+                        {currentLayout.schoolName}
+                      </span>
+                      <span className="text-[9px] text-slate-500 font-bold leading-normal">
+                        {currentLayout.rooms.length} rooms • {currentLayout.floorsCount} floor{currentLayout.floorsCount !== 1 ? 's' : ''} • Loaded from admin blueprint
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-2 min-h-[90px] border-2 border-rose-200 rounded-2xl bg-rose-50/40 p-4">
+                      <AlertTriangle className="w-6 h-6 text-rose-500" />
+                      <span className="text-[11px] text-rose-950 font-extrabold block">
+                        No school blueprint loaded
+                      </span>
+                      <span className="text-[9px] text-slate-500 font-bold leading-normal">
+                        Ask your school admin to upload a blueprint in Guardian AI
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1036,13 +809,13 @@ export default function App() {
                   <School className="w-4 h-4 text-emerald-600" />
                   Active Map: {currentLayout.schoolName} ({currentLayout.floorsCount} Floors)
                 </span>
-                <span className="text-[10px] text-emerald-600 font-mono">🌟 CHOOSE DRILL MISSION TO RUN Below:</span>
+                <span className="text-[10px] text-emerald-600 font-mono">🌟 READY TO START YOUR ASSIGNED DRILL:</span>
               </div>
 
-              {/* DISASTER MISSIONS SELECTION GRID */}
+              {/* DRILL MISSION READY CARD */}
               <div className="bg-white border-4 border-rose-50 p-6 rounded-3xl shadow-md">
                 <h3 className="text-xs font-black text-rose-800 uppercase tracking-widest mb-4 font-display flex items-center gap-1.5">
-                  🚀 3. SELECT YOUR EMERGENCY SAFETY QUEST!
+                  🚀 3. YOUR EMERGENCY SAFETY QUEST!
                 </h3>
                 
                 {errorMsg && (
@@ -1051,25 +824,41 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {disastersList.map((dis) => (
-                    <button
-                      key={dis.type}
-                      onClick={() => handleStartDrill(dis.type)}
-                      className={`p-4 border-2 rounded-2xl text-left transition cursor-pointer flex flex-col gap-2 h-36 ${dis.color} ${dis.hoverColor} shadow-sm relative overflow-hidden group`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl group-hover:scale-110 transition duration-300">{dis.emoji}</span>
-                        <span className="px-2.5 py-1 bg-white/70 text-[9px] rounded-full font-black uppercase tracking-wider text-slate-800">
-                          START MISSION
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="font-black text-sm tracking-tight font-display">{dis.label}</h4>
-                        <p className="text-[10px] opacity-90 mt-1 font-semibold leading-normal">{dis.desc}</p>
-                      </div>
-                    </button>
-                  ))}
+                <div className="flex flex-col items-center gap-4">
+                  {pendingDisaster ? (
+                    <>
+                      {(() => {
+                        const dis = disastersList.find(d => d.type === pendingDisaster);
+                        return dis ? (
+                          <div className={`flex items-center gap-3 p-4 border-2 rounded-2xl w-full ${dis.color}`}>
+                            <span className="text-3xl">{dis.emoji}</span>
+                            <div className="flex-1">
+                              <h4 className="font-black text-sm tracking-tight font-display">{dis.label}</h4>
+                              <p className="text-[10px] opacity-90 mt-1 font-semibold leading-normal">{dis.desc}</p>
+                            </div>
+                            <span className="px-2.5 py-1 bg-white/70 text-[9px] rounded-full font-black uppercase tracking-wider text-slate-800">
+                              ASSIGNED
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
+                      <button
+                        onClick={() => handleStartDrill(pendingDisaster)}
+                        disabled={currentLayout.rooms.length === 0 || blueprintLoading}
+                        className="w-full px-6 py-4 bg-rose-500 hover:bg-rose-400 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-rose-500/10"
+                      >
+                        <Play className="w-5 h-5" />
+                        {blueprintLoading ? 'LOADING BLUEPRINT...' : currentLayout.rooms.length === 0 ? 'WAITING FOR BLUEPRINT...' : 'START DRILL MISSION!'}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl w-full">
+                      <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <span className="text-xs text-slate-600 font-bold">
+                        No disaster drill assigned. Please start a drill from Guardian AI.
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1289,165 +1078,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* MAP JSON FORMAT SCHEMA GUIDE MODAL */}
-      <AnimatePresence>
-        {showJSONGuide && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="bg-white border-4 border-amber-200 rounded-3xl max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-2xl p-6 scrollbar-thin text-slate-800 flex flex-col gap-5"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🗺️</span>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-800 font-display">
-                      Custom Map JSON Designer Guide
-                    </h3>
-                    <p className="text-[10px] text-amber-700 font-bold uppercase tracking-wider font-mono">
-                      Create your own school blueprint floor-wise!
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowJSONGuide(false)}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs cursor-pointer transition border border-slate-200"
-                >
-                  Close
-                </button>
-              </div>
-
-              {/* Description & Rules */}
-              <div className="space-y-3 text-xs leading-relaxed font-sans text-slate-600 font-bold">
-                <p>
-                  You can redesign the entire 3D interactive layout dynamically by uploading a simple JSON file. 
-                  Below is the exact schema and property rules to build your own maps:
-                </p>
-
-                <div className="bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-amber-800 font-black mb-1 font-display uppercase text-[10px]">📐 Coordinate Grid System</h4>
-                    <p className="text-[11px] font-bold">
-                      All positions (<code className="bg-slate-150 px-1 py-0.5 rounded text-rose-600">x</code>, <code className="bg-slate-150 px-1 py-0.5 rounded text-rose-600">y</code>) and dimensions (<code className="bg-slate-150 px-1 py-0.5 rounded text-rose-600">width</code>, <code className="bg-slate-150 px-1 py-0.5 rounded text-rose-600">height</code>) use percentage coordinates from <strong className="text-slate-800">0 to 100</strong> representing the campus.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-amber-800 font-black mb-1 font-display uppercase text-[10px]">🏢 Room Types Supported</h4>
-                    <p className="text-[11px] font-bold">
-                      <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">classroom</code>, <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">laboratory</code>, <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">library</code>, <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">office</code>, <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">corridor</code>, <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">staircase</code>, <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">emergency_exit</code>, <code className="text-sky-700 bg-sky-50 px-1 py-0.5 rounded text-[10px]">playground</code>
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-slate-800 font-black mb-1 text-[11px] font-display">🌟 SMART AUTO-DEFAULTING SYSTEM:</h4>
-                  <p className="text-[11px] font-medium text-slate-500 font-bold">
-                    If you don't supply <code className="text-slate-700">doors</code>, <code className="text-slate-700">windows</code>, <code className="text-slate-700">furniture</code> or room <code className="text-slate-700">color</code> details, our system automatically generates accessible doors, places default safety assets, and paints them beautiful aesthetic colors based on room type! You only need to define basic coordinates.
-                  </p>
-                </div>
-              </div>
-
-              {/* JSON Template */}
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">📋 COPYABLE MAP TEMPLATE (sunny_valley_academy_map.json)</span>
-                  <button
-                    onClick={handleDownloadSampleJSON}
-                    className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition shadow-sm"
-                  >
-                    📥 Download Template JSON file
-                  </button>
-                </div>
-                <pre className="bg-slate-900 text-amber-200/90 text-[10px] p-4 rounded-2xl overflow-x-auto font-mono leading-relaxed h-72 border-2 border-slate-950 shadow-inner">
-{`{
-  "schoolName": "Sunny Valley Academy",
-  "floorsCount": 2,
-  "rooms": [
-    {
-      "id": "rm_sv_101",
-      "name": "Classroom 101 - Math Wing",
-      "type": "classroom",
-      "x": 10,
-      "y": 10,
-      "width": 25,
-      "height": 30,
-      "floor": 1,
-      "color": "#e0f2fe",
-      "doors": [
-        { "id": "door_sv_1", "x": 22, "y": 40, "width": 4, "height": 1, "isOpen": true }
-      ],
-      "windows": [
-        { "id": "win_sv_1", "x": 15, "y": 10, "width": 4 }
-      ],
-      "furniture": [
-        { "id": "fur_sv_1", "name": "Teacher Desk", "type": "table", "x": 13, "y": 15, "width": 3, "height": 2, "canShelterUnder": true }
-      ]
-    },
-    {
-      "id": "rm_sv_lab",
-      "name": "Curie Chemistry Lab",
-      "type": "laboratory",
-      "x": 38,
-      "y": 10,
-      "width": 24,
-      "height": 30,
-      "floor": 1,
-      "color": "#f0fdf4"
-    },
-    {
-      "id": "rm_sv_stairs",
-      "name": "Stairwell West",
-      "type": "staircase",
-      "x": 65,
-      "y": 10,
-      "width": 12,
-      "height": 30,
-      "floor": 1,
-      "color": "#fffbeb"
-    },
-    {
-      "id": "rm_sv_exit",
-      "name": "Emergency Exit Route",
-      "type": "emergency_exit",
-      "x": 80,
-      "y": 10,
-      "width": 15,
-      "height": 30,
-      "floor": 1,
-      "color": "#ecfdf5"
-    }
-  ],
-  "assemblyArea": {
-    "x": 88,
-    "y": 80,
-    "radius": 12,
-    "name": "Main Sports Assembly Field"
-  }
-}`}
-                </pre>
-              </div>
-
-              {/* Close Footer */}
-              <div className="flex justify-end border-t border-slate-100 pt-3">
-                <button
-                  onClick={() => setShowJSONGuide(false)}
-                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-xs font-black cursor-pointer transition shadow-md shadow-amber-500/10"
-                >
-                  GOT IT, START DESIGNING!
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

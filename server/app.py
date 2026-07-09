@@ -8,7 +8,7 @@ from routes import auth_bp, superadmin_bp, admin_bp, teacher_bp, student_bp
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, origins=['http://localhost:5173', 'http://localhost:5174'], supports_credentials=True)
+    CORS(app, origins=['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'], supports_credentials=True)
 
     # Ensure uploads directory exists
     os.makedirs(UPLOAD_DIR, exist_ok=True)

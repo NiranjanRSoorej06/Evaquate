@@ -44,7 +44,7 @@ export default function AdminDashboard({ user, onLogout }) {
         </header>
         <AlertMessages successMsg={d.successMsg} errorMsg={d.errorMsg} />
         {d.activeTab === 'overview' && (
-          <OverviewTab data={d.data} file={d.file} handleFileUpload={d.handleFileUpload} startAIScan={d.startAIScan} selectedCellType={d.selectedCellType} setSelectedCellType={d.setSelectedCellType} handleCellClick={d.handleCellClick} handleWipeBlueprint={d.handleWipeBlueprint} isMobile={d.isMobile} />
+          <OverviewTab data={d.data} user={d.user} file={d.file} handleFileUpload={d.handleFileUpload} startAIScan={d.startAIScan} selectedCellType={d.selectedCellType} setSelectedCellType={d.setSelectedCellType} handleCellClick={d.handleCellClick} handleWipeBlueprint={d.handleWipeBlueprint} isMobile={d.isMobile} isProcessing={d.isProcessing} processError={d.processError} />
         )}
         {d.activeTab === 'onboarding' && (
           <StaffOnboardingPanel isMobile={d.isMobile} isEditingTeacher={d.isEditingTeacher} user={d.user} tName={d.tName} setTName={d.setTName} tClass={d.tClass} setTClass={d.setTClass} tPassword={d.tPassword} setTPassword={d.setTPassword} showPassword={d.showPassword} setShowPassword={d.setShowPassword} handleCreateTeacher={d.handleCreateTeacher} cancelEditTeacher={d.cancelEditTeacher} />

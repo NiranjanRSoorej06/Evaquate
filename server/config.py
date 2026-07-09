@@ -6,6 +6,7 @@ load_dotenv()
 PORT = int(os.environ.get('PORT', 3001))
 JWT_SECRET = os.environ.get('JWT_SECRET', 'super_secret_jwt_key_123')
 NODE_ENV = os.environ.get('NODE_ENV', 'development')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 IS_PRODUCTION = NODE_ENV == 'production'
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')

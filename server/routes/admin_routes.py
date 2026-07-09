@@ -48,3 +48,15 @@ def upload_blueprint(schoolId):
 @adm
 def update_blueprint(schoolId):
     return admin_controller.update_blueprint(schoolId)
+
+
+@admin_bp.route('/api/public/school/<schoolId>/blueprint', methods=['GET'])
+def get_public_blueprint(schoolId):
+    return admin_controller.get_public_blueprint(schoolId)
+
+
+@admin_bp.route('/api/admin/<schoolId>/image-to-json', methods=['POST'])
+@auth
+@adm
+def image_to_json(schoolId):
+    return admin_controller.image_to_json(schoolId)
