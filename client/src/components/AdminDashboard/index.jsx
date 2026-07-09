@@ -5,6 +5,7 @@ import AdminSidebar from './AdminSidebar';
 import OverviewTab from './OverviewTab';
 import StaffOnboardingPanel from './StaffOnboardingPanel';
 import PerformanceTab from './PerformanceTab';
+import { LogOut } from 'lucide-react';
 
 const TAB_TITLES = {
   overview: 'System Infrastructure Overview',
@@ -33,13 +34,16 @@ export default function AdminDashboard({ user, onLogout }) {
         setIsSidebarOpen={d.setIsSidebarOpen} onLogout={onLogout}
       />
       <main style={{ flex: 1, padding: d.isMobile ? '20px' : '40px', paddingTop: d.isMobile ? '84px' : '40px', boxSizing: 'border-box', overflowY: 'auto', width: '100%' }}>
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '32px' }}>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontSize: d.isMobile ? '22px' : '28px', fontWeight: '700', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
               {TAB_TITLES[d.activeTab]}
             </h1>
             <p style={{ color: '#64748b', margin: '6px 0 0 0', fontSize: '15px', fontWeight: '500' }}>Welcome back, Workspace Coordinator</p>
           </div>
+          <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}>
+            <LogOut size={18} /> Sign Out
+          </button>
         </header>
         {d.activeTab === 'overview' && (
           <OverviewTab data={d.data} user={d.user} file={d.file} handleFileUpload={d.handleFileUpload} startAIScan={d.startAIScan} selectedCellType={d.selectedCellType} setSelectedCellType={d.setSelectedCellType} handleCellClick={d.handleCellClick} handleWipeBlueprint={d.handleWipeBlueprint} isMobile={d.isMobile} isProcessing={d.isProcessing} processError={d.processError} />

@@ -725,6 +725,13 @@ export default function App() {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={() => window.close()}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-2xl border-2 border-slate-200 text-slate-700 font-black text-[11px] uppercase tracking-wider shadow-sm transition cursor-pointer"
+            title="Return to Main Page"
+          >
+            ← Back to Dashboard
+          </button>
+          <button
             onClick={toggleSound}
             className={`p-2.5 rounded-2xl border-2 transition cursor-pointer shadow-sm ${
               soundEnabled 

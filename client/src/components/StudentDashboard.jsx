@@ -288,21 +288,22 @@ export default function StudentDashboard({ user, onLogout }) {
             <Award size={18} /> Performance Logs
           </button>
         </nav>
-
-        <button onClick={onLogout} className="sidebar-item" style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)' }}>
-          <LogOut size={18} /> Sign Out
-        </button>
       </aside>
 
       {/* Main Content Pane */}
       <main className="main-surface" style={{ flex: 1, padding: isMobile ? '20px' : '40px', paddingTop: isMobile ? '84px' : '40px', overflowY: 'auto', boxSizing: 'border-box', width: '100%' }}>
-        <header style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
-            {sidebarTab === 'overview' ? 'Ready for Training?' : 'Mission History'}
-          </h1>
-          <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
-            Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
-          </p>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
+              {sidebarTab === 'overview' ? 'Ready for Training?' : 'Mission History'}
+            </h1>
+            <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
+              Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
+            </p>
+          </div>
+          <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}>
+            <LogOut size={18} /> Sign Out
+          </button>
         </header>
 
         {sidebarTab === 'overview' ? (

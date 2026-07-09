@@ -6,6 +6,7 @@ import AlertBanners from './AlertBanners';
 import DirectoryTab from './DirectoryTab';
 import RegisterSchoolForm from './RegisterSchoolForm';
 import PasswordResetModal from './PasswordResetModal';
+import { LogOut } from 'lucide-react';
 
 export default function SuperAdminDashboard({ user, onLogout }) {
   const d = useSuperAdminDashboard();
@@ -24,6 +25,9 @@ export default function SuperAdminDashboard({ user, onLogout }) {
               Root Operator: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.username || 'Admin'}</span> | Domain Status: <span style={{ fontWeight: '600', color: '#10b981' }}>Active</span>
             </p>
           </div>
+          <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}>
+            <LogOut size={18} /> Sign Out
+          </button>
         </header>
         <AlertBanners message={d.message} error={d.error} />
         {d.sidebarTab === 'directory' && (

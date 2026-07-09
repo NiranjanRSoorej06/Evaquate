@@ -58,14 +58,6 @@ export default function AdminSidebar({
           <Users size={18} /> Performance Registry
         </button>
       </nav>
-
-      <button
-        type="button"
-        onClick={onLogout}
-        style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', padding: '12px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }}
-      >
-        Sign Out
-      </button>
     </aside>
     </>
   );

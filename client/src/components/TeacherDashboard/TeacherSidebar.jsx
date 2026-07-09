@@ -41,9 +41,6 @@ export default function TeacherSidebar({
             <BookOpen size={18} /> My Quizzes
           </button>
         </nav>
-        <button type="button" onClick={onLogout} style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '12px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>
-          Sign Out
-        </button>
       </aside>
     </>
   );
