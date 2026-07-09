@@ -1,9 +1,9 @@
 import { Gamepad2, Video, CheckSquare } from 'lucide-react';
 
 const ACTIVITIES = [
-  { id: 'drill', label: 'Evacuation Drill 🎮', icon: Gamepad2, note: 'Practice live escape paths.' },
-  { id: 'video', label: 'Awareness Class 📺', icon: Video, note: 'Watch safety guidelines.' },
-  { id: 'quiz', label: 'Knowledge Quiz 📝', icon: CheckSquare, note: 'Test your survival skills.' }
+  { id: 'drill', label: 'Evacuation Drill', icon: Gamepad2, note: 'Practice live escape paths.' },
+  { id: 'video', label: 'Awareness Class', icon: Video, note: 'Watch safety guidelines.' },
+  { id: 'quiz', label: 'Knowledge Quiz', icon: CheckSquare, note: 'Test your survival skills.' }
 ];
 
 export default function ActivitySelector({ isMobile, activeTab, setActiveTab }) {

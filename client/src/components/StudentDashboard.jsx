@@ -195,10 +195,10 @@ export default function StudentDashboard({ user, onLogout }) {
   };
 
   const disasters = [
-    { id: 'fire', label: 'Fire Safety', emoji: '🔥', icon: Flame, color: '#ef4444', desc: 'Master fire escapes and extinguisher PASS techniques.' },
-    { id: 'earthquake', label: 'Earthquake Drill', emoji: '🧱', icon: ShieldAlert, color: '#f97316', desc: 'Learn drop, cover, and hold procedures on campus.' },
-    { id: 'flood', label: 'Flood Survival', emoji: '🌊', icon: Waves, color: '#0ea5e9', desc: 'Find high ground and safety points during floods.' },
-    { id: 'landslide', label: 'Landslide Safety', emoji: '🧗', icon: Mountain, color: '#8b5cf6', desc: 'Evacuate slide zones and follow shelter paths.' }
+    { id: 'fire', label: 'Fire Safety', icon: Flame, color: '#ef4444', desc: 'Master fire escapes and extinguisher PASS techniques.' },
+    { id: 'earthquake', label: 'Earthquake Drill', icon: ShieldAlert, color: '#f97316', desc: 'Learn drop, cover, and hold procedures on campus.' },
+    { id: 'flood', label: 'Flood Survival', icon: Waves, color: '#0ea5e9', desc: 'Find high ground and safety points during floods.' },
+    { id: 'landslide', label: 'Landslide Safety', icon: Mountain, color: '#8b5cf6', desc: 'Evacuate slide zones and follow shelter paths.' }
   ];
 
   return (
@@ -231,7 +231,7 @@ export default function StudentDashboard({ user, onLogout }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0284c7', color: '#ffffff', padding: '16px 24px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 950, boxShadow: '0 2px 10px rgba(0, 0, 0, 0.12)', height: '60px', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <GraduationCap size={22} color="#ffffff" />
-            <span style={{ fontWeight: '700', fontSize: '16px' }}>Drill Matrix 🚀</span>
+            <span style={{ fontWeight: '700', fontSize: '16px' }}>Drill Matrix</span>
           </div>
           {/* Here are your clean three lines (hamburger icon) / close button toggle */}
           <button 
@@ -275,21 +275,21 @@ export default function StudentDashboard({ user, onLogout }) {
             <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
               <GraduationCap size={24} color="#0284c7" />
             </div>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Drill Matrix 🚀</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Drill Matrix</h2>
           </div>
         </div>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button onClick={() => { setSidebarTab('overview'); handleSelectDisaster(null); setIsSidebarOpen(false); }} className={`sidebar-item ${sidebarTab === 'overview' ? 'sidebar-active' : ''}`}>
-            <Sliders size={18} /> Training Console 🧭
+            <Sliders size={18} /> Training Console
           </button>
           <button onClick={() => { setSidebarTab('performance'); setIsSidebarOpen(false); }} className={`sidebar-item ${sidebarTab === 'performance' ? 'sidebar-active' : ''}`}>
-            <Award size={18} /> Performance Logs 🏆
+            <Award size={18} /> Performance Logs
           </button>
         </nav>
 
         <button onClick={onLogout} className="sidebar-item" style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)' }}>
-          <LogOut size={18} /> Sign Out 🚪
+          <LogOut size={18} /> Sign Out
         </button>
       </aside>
 
@@ -297,10 +297,10 @@ export default function StudentDashboard({ user, onLogout }) {
       <main className="main-surface" style={{ flex: 1, padding: isMobile ? '20px' : '40px', paddingTop: isMobile ? '84px' : '40px', overflowY: 'auto', boxSizing: 'border-box', width: '100%' }}>
         <header style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
-            {sidebarTab === 'overview' ? 'Ready for Training? ⭐' : 'Mission History 📖'}
+            {sidebarTab === 'overview' ? 'Ready for Training?' : 'Mission History'}
           </h1>
           <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
-            🎒 Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | 🏫 Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
+            Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
           </p>
         </header>
 
@@ -316,7 +316,6 @@ export default function StudentDashboard({ user, onLogout }) {
                         <div style={{ background: `${d.color}10`, width: '50px', height: '50px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
                           <Icon size={24} color={d.color} />
                         </div>
-                        <span style={{ fontSize: '24px' }}>{d.emoji}</span>
                       </div>
                       <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>{d.label}</h3>
                       <p style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6', marginBottom: '20px', marginTop: '8px' }}>{d.desc}</p>
@@ -330,20 +329,20 @@ export default function StudentDashboard({ user, onLogout }) {
             ) : (
               <div>
                 <button onClick={() => handleSelectDisaster(null)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  ← Back to Menu 🗺️
+                  ← Back to Menu
                 </button>
 
                 <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', border: '1px solid #e0f2fe' }}>
                   <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#0f172a', textTransform: 'capitalize', marginBottom: '32px', margin: 0 }}>
-                    {selectedDisaster} Preparedness Task ✨
+                    {selectedDisaster} Preparedness Task
                   </h2>
 
                   {/* Activity Selector (Becomes single column on phone widths) */}
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '40px' }}>
                     {[
-                      { id: 'drill', label: 'Evacuation Drill 🎮', icon: Gamepad2, note: 'Practice live escape paths.' },
-                      { id: 'video', label: 'Awareness Class 📺', icon: Video, note: 'Watch safety guidelines.' },
-                      { id: 'quiz', label: 'Knowledge Quiz 📝', icon: CheckSquare, note: 'Test your survival skills.' }
+                      { id: 'drill', label: 'Evacuation Drill', icon: Gamepad2, note: 'Practice live escape paths.' },
+                      { id: 'video', label: 'Awareness Class', icon: Video, note: 'Watch safety guidelines.' },
+                      { id: 'quiz', label: 'Knowledge Quiz', icon: CheckSquare, note: 'Test your survival skills.' }
                     ].map(t => {
                       const Icon = t.icon;
                       return (
@@ -367,7 +366,7 @@ export default function StudentDashboard({ user, onLogout }) {
                         return (
                           <div style={{ maxWidth: '700px', margin: '0 auto' }}>
                             <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>
-                              {meta?.label || selectedDisaster} Evacuation Drill 🎮
+                              {meta?.label || selectedDisaster} Evacuation Drill
                             </h4>
                             <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 20px 0' }}>
                               Launch the interactive safety simulator to practice live escape paths for this module.
@@ -382,7 +381,7 @@ export default function StudentDashboard({ user, onLogout }) {
                                   <Icon size={22} color={meta?.color || '#0284c7'} />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                  <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px', marginBottom: '4px' }}>Evacuation Drill 🎮</div>
+                                  <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '16px', marginBottom: '4px' }}>Evacuation Drill</div>
                                   <div style={{ color: '#64748b', fontSize: '13px' }}>
                                     {meta?.label || selectedDisaster} • Interactive mock drill simulator
                                   </div>
@@ -398,19 +397,19 @@ export default function StudentDashboard({ user, onLogout }) {
                         <div style={{ textAlign: 'center', padding: '12px' }}>
                           <div style={{ background: '#0f172a', borderRadius: '20px', padding: '40px 16px', color: '#fff' }}>
                             <Video size={48} color="#38bdf8" style={{ marginBottom: '20px' }} />
-                            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '24px', margin: 0 }}>🚨 Essential {selectedDisaster} Protocols 📢</h3>
+                            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '24px', margin: 0 }}>Essential {selectedDisaster} Protocols</h3>
                             <div style={{ textAlign: 'left', maxWidth: '500px', margin: '24px auto 0 auto', fontSize: '14px', background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', lineHeight: '1.8' }}>
                               {selectedDisaster === 'fire' ? (
                                 <>
-                                  🏃 <b>Crawl low under smoke</b> to stay safe!<br/>
-                                  🤚 Use the <b>back of your hand</b> to check doors.<br/>
-                                  🧯 Remember <b>PASS</b> when using extinguishers.
+                                  <b>Crawl low under smoke</b> to stay safe!<br/>
+                                  Use the <b>back of your hand</b> to check doors.<br/>
+                                  Remember <b>PASS</b> when using extinguishers.
                                 </>
                               ) : (
                                 <>
-                                  🛑 <b>Drop, Cover, and Hold On!</b><br/>
-                                  🪟 Stay far away from windows and glass.<br/>
-                                  🚪 <b>Don't use elevators</b>—always use stairs.
+                                  <b>Drop, Cover, and Hold On!</b><br/>
+                                  Stay far away from windows and glass.<br/>
+                                  <b>Don't use elevators</b>—always use stairs.
                                 </>
                               )}
                             </div>
@@ -440,11 +439,11 @@ export default function StudentDashboard({ user, onLogout }) {
                       {activeTab === 'quiz' && (
                         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
                           {quizLoading && quizPhase === 'browse' ? (
-                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading available quizzes... ⏳</p>
+                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading available quizzes...</p>
                           ) : quizPhase === 'browse' ? (
                             <>
                               <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>
-                                {getDisasterMeta(selectedDisaster)?.label || selectedDisaster} Quiz 📝
+                                {getDisasterMeta(selectedDisaster)?.label || selectedDisaster} Quiz
                               </h4>
                               <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 20px 0' }}>
                                 Pick a quiz below to start. New uploads from your teacher appear here right away.
@@ -480,22 +479,22 @@ export default function StudentDashboard({ user, onLogout }) {
                               ) : (
                                 <div style={{ textAlign: 'center', padding: '32px 16px', background: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
                                   <p style={{ color: '#64748b', margin: 0 }}>
-                                    No quizzes available for {getDisasterMeta(selectedDisaster)?.label?.toLowerCase() || selectedDisaster} yet. Your teacher hasn&apos;t uploaded one for this module. 📋
+                                    No quizzes available for {getDisasterMeta(selectedDisaster)?.label?.toLowerCase() || selectedDisaster} yet. Your teacher hasn&apos;t uploaded one for this module.
                                   </p>
                                 </div>
                               )}
                             </>
                           ) : quizLoading ? (
-                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading quiz questions... ⏳</p>
+                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading quiz questions...</p>
                           ) : quizPhase === 'finished' || quizFinished ? (
                             <div style={{ textAlign: 'center' }}>
                               <Award size={64} color="#0284c7" style={{ marginBottom: '16px' }} />
-                              <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Awesome Job! 🎉</h2>
+                              <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0' }}>Awesome Job!</h2>
                               <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#0284c7', margin: '0 0 8px 0' }}>Your Score: {finalPercentage}%</h3>
                               {activeQuiz?.label && <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>{activeQuiz.label}</p>}
                               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                <button onClick={() => activeQuiz && startQuiz(activeQuiz)} className="btn-primary">Try Again 🔄</button>
-                                <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(selectedDisaster); }} className="btn-primary" style={{ background: '#e0f2fe', color: '#0284c7' }}>Back to Quiz 📚</button>
+                                <button onClick={() => activeQuiz && startQuiz(activeQuiz)} className="btn-primary">Try Again</button>
+                                <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(selectedDisaster); }} className="btn-primary" style={{ background: '#e0f2fe', color: '#0284c7' }}>Back to Quiz</button>
                               </div>
                             </div>
                           ) : quizQuestions.length > 0 ? (
@@ -505,17 +504,17 @@ export default function StudentDashboard({ user, onLogout }) {
                                   {activeQuiz?.label || activeQuiz?.title || 'Knowledge Quiz'} • Question {currentQuestionIndex + 1} of {quizQuestions.length}
                                 </div>
                               </div>
-                              <h4 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#1e293b', margin: '0 0 24px 0' }}>🤔 {quizQuestions[currentQuestionIndex]?.question}</h4>
+                              <h4 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#1e293b', margin: '0 0 24px 0' }}>{quizQuestions[currentQuestionIndex]?.question}</h4>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
                                 {quizQuestions[currentQuestionIndex]?.options?.map((opt, i) => (
                                   <button key={i} onClick={() => handleAnswerSelect(i)} className={`quiz-option ${selectedAnswer === i ? 'quiz-option-selected' : ''}`}>{opt}</button>
                                 ))}
                               </div>
-                              <button disabled={selectedAnswer === null} onClick={handleNextQuestion} className="btn-primary" style={{ width: '100%' }}>Next Question ➡️</button>
+                              <button disabled={selectedAnswer === null} onClick={handleNextQuestion} className="btn-primary" style={{ width: '100%' }}>Next Question</button>
                             </>
                           ) : (
                             <div style={{ textAlign: 'center' }}>
-                              <p style={{ color: '#64748b', marginBottom: '16px' }}>This quiz is no longer available. Ask your teacher to upload it again. 📋</p>
+                              <p style={{ color: '#64748b', marginBottom: '16px' }}>This quiz is no longer available. Ask your teacher to upload it again.</p>
                               <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(selectedDisaster); }} className="btn-primary">Back to Quizzes</button>
                             </div>
                           )}
@@ -523,7 +522,7 @@ export default function StudentDashboard({ user, onLogout }) {
                       )}
                     </div>
                   ) : (
-                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>👇 Select an activity above to start your safety training! 🎯</div>
+                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>Select an activity above to start your safety training!</div>
                   )}
                 </div>
               </div>
@@ -535,11 +534,11 @@ export default function StudentDashboard({ user, onLogout }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Modality 🎯</th>
-                  <th>Module 🧭</th>
-                  <th>Success Rate ⭐</th>
-                  <th>Duration ⏱️</th>
-                  <th>Logged On 📅</th>
+                  <th>Modality</th>
+                  <th>Module</th>
+                  <th>Success Rate</th>
+                  <th>Duration</th>
+                  <th>Logged On</th>
                 </tr>
               </thead>
               <tbody>
@@ -548,13 +547,13 @@ export default function StudentDashboard({ user, onLogout }) {
                     <td style={{ fontWeight: '700' }}>{sc.activity_type?.toUpperCase()}</td>
                     <td style={{ textTransform: 'capitalize' }}>{sc.disaster_type}</td>
                     <td style={{ fontWeight: '700', color: sc.score >= 80 ? '#10b981' : '#f59e0b' }}>
-                      {sc.score}{sc.activity_type === 'quiz' ? '%' : ' pts'} {sc.score >= 80 ? '🥇' : '🥈'}
+                      {sc.score}{sc.activity_type === 'quiz' ? '%' : ' pts'}
                     </td>
                     <td>{sc.duration_seconds}s</td>
                     <td style={{ color: '#64748b' }}>{new Date(sc.timestamp).toLocaleDateString()}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No session logs found yet. Start training to collect trophies! 🏆</td></tr>
+                  <tr><td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>No session logs found yet. Start training to collect trophies!</td></tr>
                 )}
               </tbody>
             </table>

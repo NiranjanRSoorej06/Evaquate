@@ -14,7 +14,9 @@ export default function SchoolsTable({ schools, onViewTeachers, onDisableSchool 
       <table className="data-table">
         <thead>
           <tr>
-            <th>School Name</th><th>Unique Code</th><th>Blueprint State</th>
+            <th style={{ textAlign: 'left' }}>School Name</th>
+            <th style={{ textAlign: 'left' }}>Unique Code</th>
+            <th style={{ textAlign: 'left' }}>Blueprint State</th>
             <th style={{ textAlign: 'center' }}>Teachers</th>
             <th style={{ textAlign: 'center' }}>Students</th>
             <th style={{ textAlign: 'center' }}>Status</th>
@@ -43,7 +45,7 @@ export default function SchoolsTable({ schools, onViewTeachers, onDisableSchool 
               <td style={{ textAlign: 'center', fontWeight: '500' }}>{s.student_count || 0}</td>
               <td style={{ textAlign: 'center' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600', color: s.disabled ? '#ef4444' : '#10b981' }}>
-                  {s.disabled ? '🔒 Disabled' : '🔓 Active'}
+                  {s.disabled ? 'Disabled' : 'Active'}
                 </span>
               </td>
               <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>

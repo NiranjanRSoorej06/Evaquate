@@ -25,10 +25,10 @@ export default function StudentDashboard({ user, onLogout }) {
       <main style={{ flex: 1, padding: d.isMobile ? '20px' : '40px', paddingTop: d.isMobile ? '84px' : '40px', overflowY: 'auto', boxSizing: 'border-box', width: '100%' }}>
         <header style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: d.isMobile ? '24px' : '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
-            {d.sidebarTab === 'overview' ? 'Ready for Training? ⭐' : 'Mission History 📖'}
+            {d.sidebarTab === 'overview' ? 'Ready for Training?' : 'Mission History'}
           </h1>
           <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
-            🎒 Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | 🏫 Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
+            Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
           </p>
         </header>
         {d.sidebarTab === 'overview' ? (
