@@ -31,9 +31,6 @@ export default function StudentSidebar({
             <Award size={18} /> Performance Logs
           </button>
         </nav>
-        <button onClick={onLogout} className="sidebar-item" style={{ marginTop: 'auto', background: 'rgba(255,255,255,0.1)' }}>
-          <LogOut size={18} /> Sign Out
-        </button>
       </aside>
     </>
   );

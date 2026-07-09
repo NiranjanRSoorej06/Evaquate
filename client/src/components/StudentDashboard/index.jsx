@@ -5,6 +5,7 @@ import StudentSidebar from './StudentSidebar';
 import DisasterModuleGrid from './DisasterModuleGrid';
 import TrainingOverview from './TrainingOverview';
 import PerformanceLogTab from './PerformanceLogTab';
+import { LogOut } from 'lucide-react';
 
 export default function StudentDashboard({ user, onLogout }) {
   const d = useStudentDashboard(user);
@@ -23,13 +24,18 @@ export default function StudentDashboard({ user, onLogout }) {
       {d.isMobile && <StudentMobileHeader isSidebarOpen={d.isSidebarOpen} setIsSidebarOpen={d.setIsSidebarOpen} />}
       <StudentSidebar sidebarTab={d.sidebarTab} isMobile={d.isMobile} isSidebarOpen={d.isSidebarOpen} setIsSidebarOpen={d.setIsSidebarOpen} goToOverview={d.goToOverview} goToPerformance={d.goToPerformance} onLogout={onLogout} />
       <main style={{ flex: 1, padding: d.isMobile ? '20px' : '40px', paddingTop: d.isMobile ? '84px' : '40px', overflowY: 'auto', boxSizing: 'border-box', width: '100%' }}>
-        <header style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: d.isMobile ? '24px' : '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
-            {d.sidebarTab === 'overview' ? 'Ready for Training?' : 'Mission History'}
-          </h1>
-          <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
-            Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
-          </p>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: d.isMobile ? '24px' : '28px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', margin: 0 }}>
+              {d.sidebarTab === 'overview' ? 'Ready for Training?' : 'Mission History'}
+            </h1>
+            <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '500', margin: 0 }}>
+              Student Explorer: <span style={{ color: '#0284c7', fontWeight: '600' }}>{user?.name || 'Guest'}</span> | Room: <span style={{ color: '#0f172a', fontWeight: '600' }}>{user?.class_assigned || 'N/A'}</span>
+            </p>
+          </div>
+          <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}>
+            <LogOut size={18} /> Sign Out
+          </button>
         </header>
         {d.sidebarTab === 'overview' ? (
           <>

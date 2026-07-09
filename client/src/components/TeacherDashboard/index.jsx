@@ -6,6 +6,7 @@ import AlertMessages from './AlertMessages';
 import OverviewTab from './OverviewTab';
 import QuizzesTab from './QuizzesTab';
 import AddQuizTab from './AddQuizTab';
+import { LogOut } from 'lucide-react';
 
 export default function TeacherDashboard({ user, onLogout }) {
   const d = useTeacherDashboard(user);
@@ -27,11 +28,16 @@ export default function TeacherDashboard({ user, onLogout }) {
         onLogout={onLogout}
       />
       <main style={{ flex: 1, padding: d.isMobile ? '24px 20px 20px' : '40px', paddingTop: d.isMobile ? '84px' : '40px', boxSizing: 'border-box', overflowY: 'auto' }}>
-        <header style={{ marginBottom: '24px' }}>
-          <h1 style={{ fontSize: d.isMobile ? '22px' : '28px', fontWeight: '700', margin: 0 }}>Teacher Control Center</h1>
-          <p style={{ color: '#64748b', margin: '6px 0 0 0' }}>
-            Welcome back, {user?.name || 'Teacher'} • {user?.class_assigned || 'Classroom'}
-          </p>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div>
+            <h1 style={{ fontSize: d.isMobile ? '22px' : '28px', fontWeight: '700', margin: 0 }}>Teacher Control Center</h1>
+            <p style={{ color: '#64748b', margin: '6px 0 0 0' }}>
+              Welcome back, {user?.name || 'Teacher'} • {user?.class_assigned || 'Classroom'}
+            </p>
+          </div>
+          <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}>
+            <LogOut size={18} /> Sign Out
+          </button>
         </header>
         <AlertMessages successMsg={d.successMsg} errorMsg={d.errorMsg} />
         {d.activeTab === 'overview' && (
