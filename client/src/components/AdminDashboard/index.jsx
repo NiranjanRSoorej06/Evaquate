@@ -2,7 +2,6 @@ import './AdminDashboard.css';
 import { useAdminDashboard } from './hooks/useAdminDashboard';
 import AdminMobileHeader from './AdminMobileHeader';
 import AdminSidebar from './AdminSidebar';
-import AlertMessages from './AlertMessages';
 import OverviewTab from './OverviewTab';
 import StaffOnboardingPanel from './StaffOnboardingPanel';
 import PerformanceTab from './PerformanceTab';
@@ -42,7 +41,6 @@ export default function AdminDashboard({ user, onLogout }) {
             <p style={{ color: '#64748b', margin: '6px 0 0 0', fontSize: '15px', fontWeight: '500' }}>Welcome back, Workspace Coordinator</p>
           </div>
         </header>
-        <AlertMessages successMsg={d.successMsg} errorMsg={d.errorMsg} />
         {d.activeTab === 'overview' && (
           <OverviewTab data={d.data} user={d.user} file={d.file} handleFileUpload={d.handleFileUpload} startAIScan={d.startAIScan} selectedCellType={d.selectedCellType} setSelectedCellType={d.setSelectedCellType} handleCellClick={d.handleCellClick} handleWipeBlueprint={d.handleWipeBlueprint} isMobile={d.isMobile} isProcessing={d.isProcessing} processError={d.processError} />
         )}

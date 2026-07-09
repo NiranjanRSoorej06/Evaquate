@@ -21,7 +21,7 @@ export default function RegisterSchoolForm({
         </div>
         <div className="form-group">
           <label className="form-label">Unique School ID Code</label>
-          <input type="text" className="form-input" placeholder="e.g. SCH-78901" value={code} onChange={e => setCode(e.target.value)} required />
+          <input type="text" className="form-input" placeholder="e.g. ABC (3-letter code)" value={code} onChange={e => setCode(e.target.value)} required />
         </div>
         <div className="form-group">
           <label className="form-label">Access Passphrase</label>

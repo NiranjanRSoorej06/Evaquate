@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../../Toast';
 
 export function useSuperAdminDashboard() {
+  const addToast = useToast();
   const [schools, setSchools] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
@@ -39,23 +41,25 @@ export function useSuperAdminDashboard() {
 
   const fetchTeachers = async (schoolId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/superadmin/schools/${schoolId}/teachers`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/superadmin/schools/${schoolId}/teachers`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       setTeachers(data || []);
     } catch (err) {
       console.error(err);
       setError('Failed to fetch teachers');
+      addToast('Failed to fetch teachers', 'error');
     }
   };
 
   const fetchStudents = async (schoolId, teacherId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/superadmin/schools/${schoolId}/teachers/${teacherId}/students`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/superadmin/schools/${schoolId}/teachers/${teacherId}/students`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       setStudents(data || []);
     } catch (err) {
       console.error(err);
       setError('Failed to fetch students');
+      addToast('Failed to fetch students', 'error');
     }
   };
 
@@ -67,16 +71,27 @@ export function useSuperAdminDashboard() {
     e.preventDefault();
     setError('');
     setMessage('');
+
+    if (!/^[a-zA-Z]{3}$/.test(code)) {
+      const msg = 'School ID Code must be exactly 3 alphabetic letters (e.g. ABC).';
+      setError(msg);
+      addToast(msg, 'error');
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:3001/api/superadmin/schools', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, unique_code: code, password })
+        body: JSON.stringify({ name, unique_code: code, password }),
+        skipGlobalToast: true
       });
       const data = await response.json();
       if (data.success) {
-        setMessage(`School registered successfully! ID: ${code}`);
+        const msg = `School registered successfully! ID: ${code}`;
+        setMessage(msg);
+        addToast(msg, 'success');
         setName('');
         setCode('');
         setPassword('');
@@ -84,9 +99,11 @@ export function useSuperAdminDashboard() {
         fetchSchools();
       } else {
         setError(data.message || 'Failed to register school.');
+        addToast(data.message || 'Failed to register school.', 'error');
       }
     } catch (err) {
       setError('Connection failure.');
+      addToast('Connection failure.', 'error');
     }
   };
 
@@ -109,17 +126,22 @@ export function useSuperAdminDashboard() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ disabled: !currentDisabled })
+        body: JSON.stringify({ disabled: !currentDisabled }),
+        skipGlobalToast: true
       });
       const data = await response.json();
       if (data.success) {
-        setMessage(`School ${!currentDisabled ? 'disabled' : 'enabled'} successfully.`);
+        const msg = `School ${!currentDisabled ? 'disabled' : 'enabled'} successfully.`;
+        setMessage(msg);
+        addToast(msg, 'success');
         fetchSchools();
       } else {
         setError(data.message || 'Failed to update school.');
+        addToast(data.message || 'Failed to update school.', 'error');
       }
     } catch (err) {
       setError('Connection failure.');
+      addToast('Connection failure.', 'error');
     }
   };
 
@@ -139,20 +161,24 @@ export function useSuperAdminDashboard() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ password: resetPassword })
+        body: JSON.stringify({ password: resetPassword }),
+        skipGlobalToast: true
       });
       const data = await response.json();
       if (data.success) {
         setMessage('Password reset successfully.');
+        addToast('Password reset successfully.', 'success');
         setResetPassword('');
         setResetTarget(null);
         if (resetTarget.type === 'teacher') fetchTeachers(selectedSchool.id);
         else fetchStudents(selectedSchool.id, selectedTeacher.id);
       } else {
         setError(data.message || 'Failed to reset password.');
+        addToast(data.message || 'Failed to reset password.', 'error');
       }
     } catch (err) {
       setError('Connection failure.');
+      addToast('Connection failure.', 'error');
     }
   };
 
