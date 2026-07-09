@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '../../../components/Toast';
 
 export function useAdminDashboard(user) {
+  const addToast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -17,8 +19,6 @@ export function useAdminDashboard(user) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processError, setProcessError] = useState('');
   const [selectedCellType, setSelectedCellType] = useState('wall');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     const handleResize = () => {
@@ -50,8 +50,6 @@ export function useAdminDashboard(user) {
 
   const handleCreateTeacher = async (e) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
     try {
       let response, resData;
       if (isEditingTeacher) {
@@ -59,7 +57,8 @@ export function useAdminDashboard(user) {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass })
+          body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass }),
+          skipGlobalToast: true
         });
         resData = await response.json();
       } else {
@@ -67,16 +66,18 @@ export function useAdminDashboard(user) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass })
+          body: JSON.stringify({ name: tName, password: tPassword, class_assigned: tClass }),
+          skipGlobalToast: true
         });
         resData = await response.json();
       }
 
       if (resData.success) {
-        setSuccessMsg(
+        addToast(
           isEditingTeacher
             ? 'Teacher updated successfully.'
-            : `Teacher account created. Login ID: ${resData.teacher?.id || `${user?.unique_code}_${tClass}`.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`
+            : `Teacher account created. Login ID: ${resData.teacher?.id || `${user?.unique_code}_${tClass}`.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
+          'success'
         );
         setTName('');
         setTPassword('');
@@ -85,10 +86,10 @@ export function useAdminDashboard(user) {
         setShowPassword(false);
         fetchDashboardData();
       } else {
-        setErrorMsg(resData.message || 'Action failed.');
+        addToast(resData.message || 'Action failed.', 'error');
       }
     } catch (err) {
-      setErrorMsg('Failed to reach backend.');
+      addToast('Failed to reach backend.', 'error');
     }
   };
 
@@ -109,7 +110,7 @@ export function useAdminDashboard(user) {
       });
       const resData = await response.json();
       if (resData.success) {
-        setSuccessMsg('Teacher account deleted.');
+        addToast('Teacher account deleted.', 'success');
         fetchDashboardData();
       }
     } catch (err) {
@@ -272,18 +273,23 @@ export function useAdminDashboard(user) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ blueprint_json: completeLayout })
+          body: JSON.stringify({ blueprint_json: completeLayout }),
+          skipGlobalToast: true
         });
         const resData = await response.json();
         if (resData.success) {
           setFile(null);
-          setSuccessMsg(`Blueprint loaded: ${completeLayout.schoolName} (${completeLayout.rooms.length} rooms, ${completeLayout.floorsCount} floor(s)).`);
+          addToast(`Blueprint loaded: ${completeLayout.schoolName} (${completeLayout.rooms.length} rooms, ${completeLayout.floorsCount} floor(s)).`, 'success');
           fetchDashboardData();
         } else {
-          setProcessError(resData.message || 'Failed to save blueprint.');
+          const errMsg = resData.message || 'Failed to save blueprint.';
+          setProcessError(errMsg);
+          addToast(errMsg, 'error');
         }
       } catch (err) {
-        setProcessError(err.message || 'Syntax error inside JSON file.');
+        const errMsg = err.message || 'Syntax error inside JSON file.';
+        setProcessError(errMsg);
+        addToast(errMsg, 'error');
       } finally {
         setIsProcessing(false);
       }
@@ -369,8 +375,6 @@ export function useAdminDashboard(user) {
     processError,
     selectedCellType,
     setSelectedCellType,
-    successMsg,
-    errorMsg,
     user,
     handleCreateTeacher,
     handleEditTeacherClick,

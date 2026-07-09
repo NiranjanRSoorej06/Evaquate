@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Flame, ShieldAlert, Waves, Mountain, GraduationCap, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight, Menu, X } from 'lucide-react';
+import { useToast } from './Toast';
 
 const GAME_DISASTER_MAP = {
   fire: 'fire',
@@ -9,6 +10,7 @@ const GAME_DISASTER_MAP = {
 };
 
 export default function StudentDashboard({ user, onLogout }) {
+  const addToast = useToast();
   const [selectedDisaster, setSelectedDisaster] = useState(null); 
   const [activeTab, setActiveTab] = useState(null); 
   const [sidebarTab, setSidebarTab] = useState('overview'); 
@@ -43,14 +45,15 @@ export default function StudentDashboard({ user, onLogout }) {
   const fetchScoreHistory = useCallback(async () => {
     if (!user?.teacher_id || !user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       const me = data.students?.find(s => s.id === user.id);
       if (me) setScoreHistory(me.scores || []);
     } catch (err) {
       console.error(err);
+      addToast('Failed to load performance score history.', 'error');
     }
-  }, [user?.teacher_id, user?.id]);
+  }, [user?.teacher_id, user?.id, addToast]);
 
   useEffect(() => {
     fetchScoreHistory();
@@ -82,16 +85,17 @@ export default function StudentDashboard({ user, onLogout }) {
     setQuizLoading(true);
     try {
       const query = disasterType ? `?disaster=${encodeURIComponent(disasterType)}` : '';
-      const response = await fetch(`http://localhost:3001/api/student/quizzes${query}`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/student/quizzes${query}`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       setAvailableQuizzes(data.quizzes || []);
     } catch (err) {
       console.error(err);
+      addToast('Failed to load available quizzes.', 'error');
       setAvailableQuizzes([]);
     } finally {
       setQuizLoading(false);
     }
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     if (activeTab === 'quiz' && selectedDisaster) {
@@ -116,7 +120,7 @@ export default function StudentDashboard({ user, onLogout }) {
     setQuizCorrectCount(0);
     setFinalPercentage(0);
     try {
-      const response = await fetch(`http://localhost:3001/api/quizzes/${quizId}`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/quizzes/${quizId}`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       if (data?.questions?.length) {
         setQuizQuestions(data.questions);
@@ -127,6 +131,7 @@ export default function StudentDashboard({ user, onLogout }) {
       return false;
     } catch (err) {
       console.error(err);
+      addToast('Failed to load the quiz.', 'error');
       setQuizQuestions([]);
       return false;
     } finally {
@@ -179,11 +184,13 @@ export default function StudentDashboard({ user, onLogout }) {
           activity_type: activityType,
           score,
           duration_seconds: durationSeconds
-        })
+        }),
+        skipGlobalToast: true
       });
       fetchScoreHistory();
     } catch (err) {
       console.error("Failed to post score", err);
+      addToast('Failed to submit activity score.', 'error');
     }
   };
 

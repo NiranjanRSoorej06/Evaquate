@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '../../Toast';
 
 export function useStudentDashboard(user) {
+  const addToast = useToast();
   const [selectedDisaster, setSelectedDisaster] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
   const [sidebarTab, setSidebarTab] = useState('overview');
@@ -29,14 +31,15 @@ export function useStudentDashboard(user) {
   const fetchScoreHistory = useCallback(async () => {
     if (!user?.teacher_id || !user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       const me = data.students?.find(s => s.id === user.id);
       if (me) setScoreHistory(me.scores || []);
     } catch (err) {
       console.error(err);
+      addToast('Failed to load performance score history.', 'error');
     }
-  }, [user?.teacher_id, user?.id]);
+  }, [user?.teacher_id, user?.id, addToast]);
 
   useEffect(() => { fetchScoreHistory(); }, [fetchScoreHistory]);
 
@@ -54,16 +57,17 @@ export function useStudentDashboard(user) {
     setQuizLoading(true);
     try {
       const query = disasterType ? `?disaster=${encodeURIComponent(disasterType)}` : '';
-      const response = await fetch(`http://localhost:3001/api/student/quizzes${query}`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/student/quizzes${query}`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       setAvailableQuizzes(data.quizzes || []);
     } catch (err) {
       console.error(err);
+      addToast('Failed to load available quizzes.', 'error');
       setAvailableQuizzes([]);
     } finally {
       setQuizLoading(false);
     }
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     if (activeTab === 'quiz' && selectedDisaster) {
@@ -88,7 +92,7 @@ export function useStudentDashboard(user) {
     setQuizCorrectCount(0);
     setFinalPercentage(0);
     try {
-      const response = await fetch(`http://localhost:3001/api/quizzes/${quizId}`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/quizzes/${quizId}`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       if (data?.questions?.length) {
         setQuizQuestions(data.questions);
@@ -99,6 +103,7 @@ export function useStudentDashboard(user) {
       return false;
     } catch (err) {
       console.error(err);
+      addToast('Failed to load the quiz.', 'error');
       setQuizQuestions([]);
       return false;
     } finally {
@@ -132,11 +137,13 @@ export function useStudentDashboard(user) {
           activity_type: activityType,
           score,
           duration_seconds: durationSeconds
-        })
+        }),
+        skipGlobalToast: true
       });
       fetchScoreHistory();
     } catch (err) {
       console.error('Failed to post score', err);
+      addToast('Failed to submit activity score.', 'error');
     }
   };
 

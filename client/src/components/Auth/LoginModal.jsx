@@ -1,9 +1,20 @@
-import { AlertCircle, KeyRound, User, Eye, EyeOff, Lock, Globe } from 'lucide-react';
+import { KeyRound, User, Eye, EyeOff, Lock, Globe, ShieldCheck, AlertCircle } from 'lucide-react';
+import { detectRole } from './hooks/useAuth';
+
+const ROLE_LABELS = {
+  superadmin: { label: 'Super Admin', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  admin:      { label: 'School Admin', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
+  teacher:    { label: 'Teacher',      color: '#0f766e', bg: '#f0fdfa', border: '#99f6e4' },
+  student:    { label: 'Student',      color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+};
 
 export default function LoginModal({
-  onClose, error, username, setUsername, password, setPassword,
+  onClose, username, setUsername, password, setPassword,
   showPassword, setShowPassword, loading, onSubmit
 }) {
+  const detectedRole = detectRole(username);
+  const roleInfo = detectedRole ? ROLE_LABELS[detectedRole] : null;
+
   return (
     <div className="modal-overlay">
       <div className="login-card">
@@ -17,18 +28,46 @@ export default function LoginModal({
             Enter your assigned details below. The system automatically routes students, teachers, and admins to their proper workspaces.
           </p>
         </div>
-        {error && (
-          <div style={{ display: 'flex', gap: '8px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '14px 16px', color: '#b91c1c', fontSize: '13px', marginBottom: '24px', fontWeight: 500 }}>
-            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
-            <span>{error}</span>
-          </div>
-        )}
-        <form onSubmit={onSubmit} className="auth-horizontal-form">
+        <form onSubmit={onSubmit} className="auth-vertical-form">
           <div className="field-group">
             <label className="field-label"><User size={13} color="#1d4ed8" /> Username / Student ID</label>
             <div className="field-input-wrap">
-              <input type="text" className="field-input" placeholder="Teacher ID, school code, or student ID" value={username} onChange={(e) => setUsername(e.target.value)} required />
+              <input
+                type="text"
+                className="field-input"
+                placeholder="e.g. ABC · abc_1_a · abc_1_a_23 · superadmin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoComplete="username"
+              />
             </div>
+            {/* Live role detection badge */}
+            {username.trim().length > 0 && (
+              <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {roleInfo ? (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    fontSize: '12px', fontWeight: 600, padding: '3px 10px',
+                    borderRadius: '20px',
+                    background: roleInfo.bg, color: roleInfo.color, border: `1px solid ${roleInfo.border}`
+                  }}>
+                    <ShieldCheck size={12} />
+                    {roleInfo.label} detected
+                  </span>
+                ) : (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    fontSize: '12px', fontWeight: 600, padding: '3px 10px',
+                    borderRadius: '20px',
+                    background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca'
+                  }}>
+                    <AlertCircle size={12} />
+                    Unrecognised format
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="field-group">
             <label className="field-label"><KeyRound size={13} color="#1d4ed8" /> Password</label>
@@ -40,7 +79,7 @@ export default function LoginModal({
             </div>
           </div>
           <div className="submit-btn-wrap">
-            <button type="submit" className="submit-btn" disabled={loading}>
+            <button type="submit" className="submit-btn" disabled={loading || !roleInfo}>
               {loading ? 'Entering Portal…' : 'Access Account'}
             </button>
           </div>

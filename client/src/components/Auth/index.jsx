@@ -22,7 +22,6 @@ export default function Auth({ onLoginSuccess }) {
       {auth.isModalOpen && (
         <LoginModal
           onClose={() => auth.setIsModalOpen(false)}
-          error={auth.error}
           username={auth.username}
           setUsername={auth.setUsername}
           password={auth.password}

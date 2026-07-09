@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { playSound, drawGame, CELL_SIZE } from '../gameUtils';
+import { useToast } from '../../Toast';
 
 export function useDrillGame({ schoolId, disasterType, onFinish }) {
+  const addToast = useToast();
   const [mapData, setMapData] = useState(null);
   const [gameStatus, setGameStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -25,16 +27,20 @@ export function useDrillGame({ schoolId, disasterType, onFinish }) {
     setGameStatus('loading');
     setErrorMsg('');
     try {
-      const response = await fetch(`http://localhost:3001/api/student/${schoolId}/map`, { credentials: 'include' });
+      const response = await fetch(`http://localhost:3001/api/student/${schoolId}/map`, { credentials: 'include', skipGlobalToast: true });
       if (response.status === 404) {
-        setErrorMsg('Your school map layout has not been uploaded by the School Admin yet. Contact them to set it up.');
+        const msg = 'Your school map layout has not been uploaded by the School Admin yet. Contact them to set it up.';
+        setErrorMsg(msg);
+        addToast(msg, 'error');
         setGameStatus('idle');
         return;
       }
       setMapData(await response.json());
       setGameStatus('idle');
     } catch {
-      setErrorMsg('Failed to download school map layout.');
+      const msg = 'Failed to download school map layout.';
+      setErrorMsg(msg);
+      addToast(msg, 'error');
       setGameStatus('idle');
     }
   };

@@ -4,6 +4,7 @@ import SuperAdminDashboard from './components/SuperAdminDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
+import { ToastProvider } from './components/Toast';
 
 function App() {
   const [user, setUser] = useState(null); // { id, name, role, school_id, ... }
@@ -72,23 +73,10 @@ function App() {
 
 
   return (
-    <>
+    <ToastProvider>
       <div className="bg-ambient"></div>
-      
-      {user && (
-        <nav className="navbar">
-          <div className="nav-logo">
-            <span>🛡️</span> GuardianPath AI
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px' }}>
-            <span style={{ color: 'var(--color-text-secondary)' }}>
-              Logged in as <strong style={{ color: '#fff' }}>{user.name || user.username}</strong> ({user.role.replace('_', ' ').toUpperCase()})
-            </span>
-          </div>
-        </nav>
-      )}
 
-      <main style={{ minHeight: 'calc(100vh - 70px)' }}>
+      <main style={{ minHeight: '100vh' }}>
         {!user ? (
           <Auth onLoginSuccess={handleLoginSuccess} />
         ) : (
@@ -108,7 +96,7 @@ function App() {
           </>
         )}
       </main>
-    </>
+    </ToastProvider>
   );
 }
 
