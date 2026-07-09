@@ -10,14 +10,14 @@ export default function QuizTaking({
         </div>
       </div>
       <h4 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '24px', color: '#1e293b', margin: '0 0 24px 0' }}>
-        🤔 {quizQuestions[currentQuestionIndex]?.question}
+        {quizQuestions[currentQuestionIndex]?.question}
       </h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
         {quizQuestions[currentQuestionIndex]?.options?.map((opt, i) => (
           <button key={i} onClick={() => handleAnswerSelect(i)} className={`quiz-option ${selectedAnswer === i ? 'quiz-option-selected' : ''}`}>{opt}</button>
         ))}
       </div>
-      <button disabled={selectedAnswer === null} onClick={handleNextQuestion} className="btn-primary" style={{ width: '100%' }}>Next Question ➡️</button>
+      <button disabled={selectedAnswer === null} onClick={handleNextQuestion} className="btn-primary" style={{ width: '100%' }}>Next Question</button>
     </>
   );
 }

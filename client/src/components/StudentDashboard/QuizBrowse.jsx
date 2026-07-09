@@ -6,7 +6,7 @@ export default function QuizBrowse({ selectedDisaster, availableQuizzes, startQu
   return (
     <>
       <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>
-        {meta?.label || selectedDisaster} Quiz 📝
+        {meta?.label || selectedDisaster} Quiz
       </h4>
       <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 20px 0' }}>
         Pick a quiz below to start. New uploads from your teacher appear here right away.
@@ -37,7 +37,7 @@ export default function QuizBrowse({ selectedDisaster, availableQuizzes, startQu
       ) : (
         <div style={{ textAlign: 'center', padding: '32px 16px', background: '#fff', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
           <p style={{ color: '#64748b', margin: 0 }}>
-            No quizzes available for {meta?.label?.toLowerCase() || selectedDisaster} yet. Your teacher hasn&apos;t uploaded one for this module. 📋
+            No quizzes available for {meta?.label?.toLowerCase() || selectedDisaster} yet. Your teacher hasn&apos;t uploaded one for this module.
           </p>
         </div>
       )}

@@ -69,7 +69,7 @@ export function drawGame(canvas, refs) {
         ctx.font = '20px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🧯', c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2);
+        ctx.fillText('EXT', c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2);
       } else if (val === 3) {
         ctx.fillStyle = '#f59e0b';
         ctx.fillRect(c * CELL_SIZE + 2, r * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
@@ -79,14 +79,14 @@ export function drawGame(canvas, refs) {
         ctx.font = '22px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🔥', c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2);
+        ctx.fillText('FIRE', c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2);
       } else if (val === 5) {
         ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
         ctx.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
         ctx.font = '22px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🚩', c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2);
+        ctx.fillText('SAFE', c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2);
       }
     }
   }
@@ -98,7 +98,7 @@ export function drawGame(canvas, refs) {
     ctx.font = '22px serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🚩', az.x * CELL_SIZE + CELL_SIZE / 2, az.y * CELL_SIZE + CELL_SIZE / 2);
+    ctx.fillText('SAFE', az.x * CELL_SIZE + CELL_SIZE / 2, az.y * CELL_SIZE + CELL_SIZE / 2);
   }
 
   const px = playerRef.current.x;
