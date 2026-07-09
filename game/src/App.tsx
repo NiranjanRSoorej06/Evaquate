@@ -148,6 +148,7 @@ import { audioEngine } from './components/AudioEngine';
 
 export default function App() {
   const [studentName, setStudentName] = useState<string>('Super Explorer');
+  const [studentId, setStudentId] = useState<string | null>(null);
   // Initial default layout
   const [currentLayout, setCurrentLayout] = useState<SchoolLayout>({
     schoolName: "Empty Campus",
@@ -217,8 +218,12 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const student = params.get('student');
+    const sId = params.get('studentId');
     if (student) {
       setStudentName(decodeURIComponent(student));
+    }
+    if (sId) {
+      setStudentId(sId);
     }
 
     // Read disaster type from URL params (assigned by Guardian AI)
@@ -592,16 +597,33 @@ export default function App() {
     try {
       setIsEvaluating(true);
       
+      const calculatedScore = isSuccessful ? scoreRef.current + 20 : Math.max(10, scoreRef.current - 30);
+
       const drillResult: DrillResult = {
         studentName,
         disasterType: disasterTypeRef.current || 'fire',
         timeTaken: currentTimeRef.current,
         healthRemaining: characterRef.current.health,
-        score: isSuccessful ? scoreRef.current + 20 : Math.max(10, scoreRef.current - 30),
+        score: calculatedScore,
         maxScore: maxScore,
         isSuccessful,
         actions: actionHistoryRef.current
       };
+
+      if (studentId) {
+        fetch('http://localhost:3001/api/student/score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            student_id: studentId,
+            disaster_type: disasterTypeRef.current || 'fire',
+            activity_type: 'drill',
+            score: calculatedScore,
+            duration_seconds: currentTimeRef.current
+          })
+        }).catch(err => console.error('Failed to save score to backend:', err));
+      }
 
       const res = await fetch('/api/evaluate-drill', {
         method: 'POST',
@@ -1063,6 +1085,12 @@ export default function App() {
 
                     {/* Footer Close/Restart */}
                     <div className="flex justify-end gap-3 border-t-2 border-slate-100 pt-4">
+                      <button
+                        onClick={() => window.close()}
+                        className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-2xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                      >
+                        BACK TO DASHBOARD
+                      </button>
                       <button
                         onClick={handleResetDrill}
                         className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-amber-500/10"
