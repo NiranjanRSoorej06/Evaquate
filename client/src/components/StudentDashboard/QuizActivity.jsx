@@ -10,7 +10,7 @@ export default function QuizActivity({
   fetchAvailableQuizzes
 }) {
   if (quizLoading && quizPhase === 'browse') {
-    return <p style={{ textAlign: 'center', color: '#64748b' }}>Loading available quizzes... ⏳</p>;
+    return <p style={{ textAlign: 'center', color: '#64748b' }}>Loading available quizzes...</p>
   }
   if (quizPhase === 'browse') {
     return (
@@ -22,7 +22,7 @@ export default function QuizActivity({
     );
   }
   if (quizLoading) {
-    return <p style={{ textAlign: 'center', color: '#64748b' }}>Loading quiz questions... ⏳</p>;
+    return <p style={{ textAlign: 'center', color: '#64748b' }}>Loading quiz questions...</p>
   }
   if (quizPhase === 'finished' || quizFinished) {
     return (
@@ -48,7 +48,7 @@ export default function QuizActivity({
   }
   return (
     <div style={{ textAlign: 'center' }}>
-      <p style={{ color: '#64748b', marginBottom: '16px' }}>This quiz is no longer available. Ask your teacher to upload it again. 📋</p>
+      <p style={{ color: '#64748b', marginBottom: '16px' }}>This quiz is no longer available. Ask your teacher to upload it again.</p>
       <button onClick={() => { setQuizPhase('browse'); fetchAvailableQuizzes(selectedDisaster); }} className="btn-primary">Back to Quizzes</button>
     </div>
   );

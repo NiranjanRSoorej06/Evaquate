@@ -30,7 +30,7 @@ export default function QuizDetail({ selectedQuizDetail, quizDetailLoading, getD
                   {question.options.map((option, optionIndex) => (
                     <span key={optionIndex} className={`option-pill ${optionIndex === question.answer ? 'option-pill-correct' : ''}`}>
                       {answerLabel(optionIndex)}. {option}
-                      {optionIndex === question.answer ? ' ✓' : ''}
+                      {optionIndex === question.answer ? ' (Correct)' : ''}
                     </span>
                   ))}
                 </div>

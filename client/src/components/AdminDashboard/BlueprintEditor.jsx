@@ -17,9 +17,9 @@ function getCellClass(cell) {
 }
 
 function getCellChar(cell) {
-  if (cell === 2) return '🧯';
-  if (cell === 3) return '🚪';
-  if (cell === 5) return '🚩';
+  if (cell === 2) return 'EXT';
+  if (cell === 3) return 'DR';
+  if (cell === 5) return 'AS';
   return '';
 }
 
