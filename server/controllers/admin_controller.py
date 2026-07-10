@@ -117,6 +117,14 @@ def image_to_json(schoolId):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Could not read image: {str(e)}'}), 400
 
+    # --- Persist image to Supabase Storage ---
+    image_path = blueprint_service.upload_image_to_storage(
+        schoolId, img_bytes, image_file.filename or f'blueprint.{mime_type.split("/")[-1]}'
+    )
+    if image_path is None:
+        print(f"Warning: Image for school {schoolId} could not be saved to Supabase.")
+    # -----------------------------------------
+
     prompt = """
 You are an expert architectural blueprint parser.
 
@@ -242,4 +250,5 @@ Template JSON:
     except Exception as e:
         return jsonify({'success': False, 'message': f'Gemini returned non-JSON response: {str(e)}', 'raw': raw_text[:500]}), 502
 
-    return jsonify({'success': True, 'layout': data})
+    return jsonify({'success': True, 'layout': data, 'blueprint_image_path': image_path})
+

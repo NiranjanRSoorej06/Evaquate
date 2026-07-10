@@ -134,12 +134,25 @@ def get_dashboard(school_id):
                 'students': students_with_scores,
             })
 
+        blueprint_image_path = school.get('blueprint_image_path')
+        blueprint_image_url = None
+        if blueprint_image_path:
+            from utils.supabase_client import supabase, BUCKET_NAME
+            if supabase:
+                try:
+                    res = supabase.storage.from_(BUCKET_NAME).create_signed_url(blueprint_image_path, 3600)
+                    blueprint_image_url = res.get('signedURL') or res.get('signedUrl')
+                except Exception as e:
+                    print('Error getting signed url', e)
+
         blueprint_json = school.get('blueprint_json')
-        # blueprint_json from JSONB is already a Python dict
+
         return {
             'school_name': school['name'],
             'blueprint_uploaded': bool(blueprint_json),
             'blueprint_json': blueprint_json,
+            'blueprint_image_path': blueprint_image_path,
+            'blueprint_image_url': blueprint_image_url,
             'teachers': dashboard_data,
         }, None
     except Exception as e:

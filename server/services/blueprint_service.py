@@ -1,9 +1,39 @@
 import os
 import json
 import secrets
+import uuid
 
 from config import UPLOAD_DIR
 from models import school_model
+from utils.supabase_client import supabase, BUCKET_NAME
+
+
+def upload_image_to_storage(school_id, file_bytes, filename):
+    """Upload raw image bytes to Supabase Storage and update blueprint_image_path in DB.
+
+    Returns the new storage path on success, or None if upload fails.
+    """
+    if not supabase:
+        print("Supabase client not initialized. Skipping image upload.")
+        return None
+    try:
+        # Delete old image if one exists
+        old_path = school_model.get_blueprint_image_path(school_id)
+        if old_path:
+            try:
+                supabase.storage.from_(BUCKET_NAME).remove([old_path])
+            except Exception as e:
+                print(f"Failed to remove old image: {e}")
+
+        ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'png'
+        new_path = f"{school_id}/{uuid.uuid4()}.{ext}"
+        supabase.storage.from_(BUCKET_NAME).upload(new_path, file_bytes)
+        # Persist path immediately to DB (blueprint_json unchanged)
+        school_model.update_blueprint_with_image(school_id, None, new_path)
+        return new_path
+    except Exception as e:
+        print(f"Error uploading image to Supabase: {e}")
+        return None
 
 
 def upload_blueprint(school_id, uploaded_file, blueprint_json=None):
@@ -34,10 +64,33 @@ def upload_blueprint(school_id, uploaded_file, blueprint_json=None):
                 'blueprint_json': blueprint_json,
             }, None
 
+        image_path = None
         # Legacy path: handle file upload (multer equivalent)
         if uploaded_file:
-            filename = secrets.token_hex(16)
-            uploaded_file.save(os.path.join(UPLOAD_DIR, filename))
+            try:
+                # check old image and delete
+                old_image_path = school_model.get_blueprint_image_path(school_id)
+                if old_image_path and supabase:
+                    try:
+                        supabase.storage.from_("Evaquate Images").remove([old_image_path])
+                    except Exception as e:
+                        print(f"Failed to remove old image: {e}")
+
+                # upload new image
+                ext = uploaded_file.filename.split('.')[-1] if '.' in uploaded_file.filename else 'png'
+                image_uuid = str(uuid.uuid4())
+                new_path = f"{school_id}/{image_uuid}.{ext}"
+                
+                file_bytes = uploaded_file.read()
+                
+                if supabase:
+                    res = supabase.storage.from_("Evaquate Images").upload(new_path, file_bytes)
+                    image_path = new_path
+                else:
+                    print("Supabase client not initialized. Skipping image upload.")
+            except Exception as e:
+                print('Error uploading image to supabase', e)
+                return None, {'success': False, 'message': 'Storage error'}
 
         # Simulate an AI parser generating a 12x10 grid floor plan
         simulated_map = {
@@ -75,11 +128,16 @@ def upload_blueprint(school_id, uploaded_file, blueprint_json=None):
             },
         }
 
-        school_model.update_blueprint(school_id, simulated_map)
+        if image_path:
+            school_model.update_blueprint_with_image(school_id, simulated_map, image_path)
+        else:
+            school_model.update_blueprint(school_id, simulated_map)
+
         return {
             'success': True,
             'message': 'AI has successfully mapped the school layout!',
             'blueprint_json': simulated_map,
+            'blueprint_image_path': image_path
         }, None
     except Exception as e:
         print('Error uploading blueprint', e)
