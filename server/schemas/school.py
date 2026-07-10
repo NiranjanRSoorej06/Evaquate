@@ -7,6 +7,7 @@ Mirrors the `schools` database table:
     unique_code   VARCHAR(50) UNIQUE NOT NULL
     password      VARCHAR(255) NOT NULL
     blueprint_json JSONB
+    blueprint_image_path TEXT
     disabled      BOOLEAN DEFAULT false
 """
 from dataclasses import dataclass, field
@@ -21,6 +22,7 @@ class School:
     unique_code: str
     password: str
     blueprint_json: Optional[dict] = None
+    blueprint_image_path: Optional[str] = None
     disabled: bool = False
 
     def to_dict(self) -> dict:
@@ -29,6 +31,7 @@ class School:
             'name': self.name,
             'unique_code': self.unique_code,
             'blueprint_json': self.blueprint_json,
+            'blueprint_image_path': self.blueprint_image_path,
             'disabled': self.disabled,
         }
 
@@ -40,6 +43,7 @@ class School:
             unique_code=row['unique_code'],
             password=row.get('password', ''),
             blueprint_json=row.get('blueprint_json'),
+            blueprint_image_path=row.get('blueprint_image_path'),
             disabled=row.get('disabled', False),
         )
 

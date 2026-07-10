@@ -57,9 +57,31 @@ def get_blueprint(school_id):
 
 
 def get_name_and_blueprint(school_id):
-    result = sql('SELECT name, blueprint_json FROM schools WHERE id = $1', [school_id])
+    result = sql('SELECT name, blueprint_json, blueprint_image_path FROM schools WHERE id = $1', [school_id])
     return result['rows'][0] if result['rowCount'] > 0 else None
 
 
 def set_disabled(school_id, disabled):
     return sql('UPDATE schools SET disabled = $1 WHERE id = $2 RETURNING *', [disabled, school_id])
+
+
+def get_blueprint_image_path(school_id):
+    result = sql('SELECT blueprint_image_path FROM schools WHERE id = $1', [school_id])
+    if result['rowCount'] > 0:
+        return result['rows'][0].get('blueprint_image_path')
+    return None
+
+
+def update_blueprint_with_image(school_id, blueprint_json, image_path):
+    import json
+    if blueprint_json is not None:
+        return sql(
+            'UPDATE schools SET blueprint_json = $1, blueprint_image_path = $2 WHERE id = $3',
+            [json.dumps(blueprint_json), image_path, school_id]
+        )
+    else:
+        # Only update the image path, preserve existing blueprint_json
+        return sql(
+            'UPDATE schools SET blueprint_image_path = $1 WHERE id = $2',
+            [image_path, school_id]
+        )

@@ -25,6 +25,7 @@ export default function BlueprintPanel({
       ) : (
         <BlueprintEditor
           blueprintJson={data.blueprint_json}
+          blueprintImageUrl={data.blueprint_image_url}
           selectedCellType={selectedCellType}
           setSelectedCellType={setSelectedCellType}
           handleCellClick={handleCellClick}
