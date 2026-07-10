@@ -15,7 +15,8 @@ function App() {
     const checkSession = async () => {
       try {
         const response = await fetch('http://localhost:3001/api/auth/session', {
-          credentials: 'include'
+          credentials: 'include',
+          skipGlobalToast: true
         });
         if (response.ok) {
           const data = await response.json();
