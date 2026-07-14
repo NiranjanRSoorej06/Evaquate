@@ -1,4 +1,5 @@
-import { ShieldCheck, Menu, X } from 'lucide-react';
+import logoImg from '../../assets/logo_3.png';
+import { Menu, X } from 'lucide-react';
 
 export default function AdminMobileHeader({ isSidebarOpen, onToggleSidebar }) {
   return (
@@ -18,7 +19,7 @@ export default function AdminMobileHeader({ isSidebarOpen, onToggleSidebar }) {
       boxShadow: '0 2px 8px rgba(2, 132, 199, 0.15)'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <ShieldCheck size={22} color="#ffffff" />
+        <img src={logoImg} alt="EVAQUATE" style={{ height: '28px', width: 'auto' }} />
         <span style={{ fontWeight: '700', fontSize: '15px', letterSpacing: '-0.2px' }}>Admin Workspace</span>
       </div>
       <button

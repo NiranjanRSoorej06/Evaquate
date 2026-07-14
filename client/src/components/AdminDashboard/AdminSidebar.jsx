@@ -1,4 +1,5 @@
-import { ShieldCheck, Sliders, UserPlus, Users } from 'lucide-react';
+import logoImg from '../../assets/logo_3.png';
+import { Sliders, UserPlus, Users } from 'lucide-react';
 
 export default function AdminSidebar({
   activeTab,
@@ -38,8 +39,8 @@ export default function AdminSidebar({
       } : {})
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <ShieldCheck size={22} color="#0284c7" />
+        <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <img src={logoImg} alt="EVAQUATE" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
         </div>
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, letterSpacing: '-0.3px' }}>Dashboard</h2>

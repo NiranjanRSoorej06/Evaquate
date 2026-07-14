@@ -1,4 +1,5 @@
-import { ShieldCheck, BarChart3, Upload, BookOpen } from 'lucide-react';
+import logoImg from '../../assets/logo_3.png';
+import { BarChart3, Upload, BookOpen } from 'lucide-react';
 
 export default function TeacherSidebar({
   activeTab, setActiveTab, isMobile, isSidebarOpen, setIsSidebarOpen,
@@ -22,8 +23,8 @@ export default function TeacherSidebar({
         ...(isMobile ? { position: 'fixed', left: 0, top: 0, bottom: 0, transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)' } : {})
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldCheck size={22} color="#0284c7" />
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <img src={logoImg} alt="EVAQUATE" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
           </div>
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Teacher Workspace</h2>

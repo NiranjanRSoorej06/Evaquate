@@ -8,7 +8,7 @@ export default function AuthHero({ onSignInClick, onHowItWorksClick }) {
           <div className="hero-badge">Safety Education Platform</div>
           <h1>Making Campus Disaster Preparedness Safe, Smart, and Gamified</h1>
           <p>
-            Transforming traditional safety blueprints into interactive learning experiences. GuardianPath AI lets school administrators, instructors, and students connect on a single portal to master critical emergency training together.
+            Transforming traditional safety blueprints into interactive learning experiences. Evaquate lets school administrators, instructors, and students connect on a single portal to master critical emergency training together.
           </p>
           <div className="hero-cta-group">
             <button className="nav-btn" style={{ padding: '14px 32px', borderRadius: '8px', fontSize: '15px' }} onClick={onSignInClick}>

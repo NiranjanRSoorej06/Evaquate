@@ -1,4 +1,5 @@
-import { Plus, FileText, LogOut, LayoutDashboard } from 'lucide-react';
+import logoImg from '../../assets/logo_3.png';
+import { Plus, FileText, LogOut } from 'lucide-react';
 
 export default function SuperAdminSidebar({
   sidebarTab, setSidebarTab, setViewLevel, isMobile, isSidebarOpen,
@@ -19,8 +20,8 @@ export default function SuperAdminSidebar({
         ...(isMobile ? { position: 'fixed', left: 0, top: 0, bottom: 0, transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)' } : {})
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 8px' }}>
-          <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
-            <LayoutDashboard size={24} color="#0284c7" />
+          <div style={{ background: '#fff', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src={logoImg} alt="EVAQUATE" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
           </div>
           <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Super Hub</h2>
         </div>
