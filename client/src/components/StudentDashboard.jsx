@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Flame, ShieldAlert, Waves, Mountain, GraduationCap, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight, Menu, X } from 'lucide-react';
+import logoImg from '../assets/logo_3.png';
+import { Flame, ShieldAlert, Waves, Mountain, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight, Menu, X } from 'lucide-react';
 import { useToast } from './Toast';
 
 const GAME_DISASTER_MAP = {
@@ -231,7 +232,7 @@ export default function StudentDashboard({ user, onLogout }) {
       {isMobile && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0284c7', color: '#ffffff', padding: '16px 24px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 950, boxShadow: '0 2px 10px rgba(0, 0, 0, 0.12)', height: '60px', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <GraduationCap size={22} color="#ffffff" />
+            <img src={logoImg} alt="EVAQUATE" style={{ height: '28px', width: 'auto' }} />
             <span style={{ fontWeight: '700', fontSize: '16px' }}>Drill Matrix</span>
           </div>
           {/* Here are your clean three lines (hamburger icon) / close button toggle */}
@@ -273,8 +274,8 @@ export default function StudentDashboard({ user, onLogout }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '40px', padding: '0 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
-              <GraduationCap size={24} color="#0284c7" />
+            <div style={{ background: '#fff', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img src={logoImg} alt="EVAQUATE" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
             </div>
             <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Drill Matrix</h2>
           </div>
