@@ -65,7 +65,7 @@ function App() {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '18px', fontFamily: 'sans-serif' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>GuardianPath AI</div>
+          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>Evaquate</div>
           <div style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Securing your session...</div>
         </div>
       </div>

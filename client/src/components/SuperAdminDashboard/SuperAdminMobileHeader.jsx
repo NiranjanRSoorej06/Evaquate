@@ -1,10 +1,11 @@
-import { LayoutDashboard, Menu, X } from 'lucide-react';
+import logoImg from '../../assets/logo_3.png';
+import { Menu, X } from 'lucide-react';
 
 export default function SuperAdminMobileHeader({ isSidebarOpen, setIsSidebarOpen }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0284c7', color: '#ffffff', padding: '16px 24px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 950, boxShadow: '0 2px 10px rgba(0, 0, 0, 0.12)', height: '60px', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <LayoutDashboard size={22} color="#ffffff" />
+        <img src={logoImg} alt="EVAQUATE" style={{ height: '28px', width: 'auto' }} />
         <span style={{ fontWeight: '700', fontSize: '16px' }}>Super Hub</span>
       </div>
       <button

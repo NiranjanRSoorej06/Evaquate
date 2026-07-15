@@ -1,4 +1,5 @@
-import { GraduationCap, Sliders, Award, LogOut } from 'lucide-react';
+import logoImg from '../../assets/logo_3.png';
+import { Sliders, Award, LogOut } from 'lucide-react';
 
 export default function StudentSidebar({
   sidebarTab, isMobile, isSidebarOpen, setIsSidebarOpen,
@@ -17,8 +18,8 @@ export default function StudentSidebar({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '40px', padding: '0 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#fff', padding: '8px', borderRadius: '10px' }}>
-              <GraduationCap size={24} color="#0284c7" />
+            <div style={{ background: '#fff', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img src={logoImg} alt="EVAQUATE" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
             </div>
             <h2 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px', margin: 0 }}>Drill Matrix</h2>
           </div>

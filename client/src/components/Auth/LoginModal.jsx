@@ -23,7 +23,7 @@ export default function LoginModal({
           <Lock size={10} style={{ marginRight: '4px' }} /> Automated Portal Access
         </div>
         <div style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>Sign in to GuardianPath</h2>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>Sign in to Evaquate</h2>
           <p style={{ color: '#78716c', fontSize: '14px', margin: 0 }}>
             Enter your assigned details below. The system automatically routes students, teachers, and admins to their proper workspaces.
           </p>
