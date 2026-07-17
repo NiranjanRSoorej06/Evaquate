@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import logoImg from '../assets/logo_3.png';
+import SplashScreen from './SplashScreen';
 import { Flame, ShieldAlert, Waves, Mountain, Video, CheckSquare, Gamepad2, LogOut, Award, Sliders, ChevronRight, Menu, X } from 'lucide-react';
 import { useToast } from './Toast';
 
@@ -442,7 +443,7 @@ export default function StudentDashboard({ user, onLogout }) {
                       {activeTab === 'quiz' && (
                         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
                           {quizLoading && quizPhase === 'browse' ? (
-                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading available quizzes...</p>
+                            <SplashScreen mini message="Loading available quizzes" />
                           ) : quizPhase === 'browse' ? (
                             <>
                               <h4 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>
@@ -488,7 +489,7 @@ export default function StudentDashboard({ user, onLogout }) {
                               )}
                             </>
                           ) : quizLoading ? (
-                            <p style={{ textAlign: 'center', color: '#64748b' }}>Loading quiz questions...</p>
+                            <SplashScreen mini message="Loading quiz questions" />
                           ) : quizPhase === 'finished' || quizFinished ? (
                             <div style={{ textAlign: 'center' }}>
                               <Award size={64} color="#0284c7" style={{ marginBottom: '16px' }} />

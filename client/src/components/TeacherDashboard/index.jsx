@@ -11,10 +11,6 @@ import { LogOut } from 'lucide-react';
 export default function TeacherDashboard({ user, onLogout }) {
   const d = useTeacherDashboard(user);
 
-  if (d.loading) {
-    return <div className="loading-state">Preparing your teacher dashboard...</div>;
-  }
-
   return (
     <div className="teacher-dashboard">
       {d.isMobile && (

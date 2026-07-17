@@ -5,54 +5,76 @@ import AdminDashboard from './components/AdminDashboard';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
 import { ToastProvider } from './components/Toast';
+import SplashScreen from './components/SplashScreen';
+
+// Minimum time the splash is shown
+const SPLASH_DURATION = 5500;
 
 function App() {
-  const [user, setUser] = useState(null); // { id, name, role, school_id, ... }
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]               = useState(null);
+  // True until BOTH the session fetch AND the splash animation have finished
+  const [showInitSplash, setShowInitSplash] = useState(true);
+  const [sessionReady, setSessionReady]     = useState(false);
+  const [splashReady, setSplashReady]       = useState(false);
 
-  // Check for active session on load
+  const [loginSplash, setLoginSplash] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
+
+  // Session check — sets sessionReady when fetch resolves
   useEffect(() => {
     const checkSession = async () => {
       try {
         const response = await fetch('http://localhost:3001/api/auth/session', {
           credentials: 'include',
-          skipGlobalToast: true
+          skipGlobalToast: true,
         });
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.user) {
-            setUser(data.user);
-          }
+          if (data.success && data.user) setUser(data.user);
         }
       } catch (err) {
         console.error('Session validation failed:', err);
       } finally {
-        setLoading(false);
+        setSessionReady(true);
       }
     };
     checkSession();
   }, []);
 
-  // Listen for global unauthorized events to automatically logout
+  // Dismiss initial splash only when BOTH conditions are met
+  // Small delay lets the exit CSS animation finish before unmounting
   useEffect(() => {
-    const handleUnauthorized = () => {
-      setUser(null);
-    };
-    window.addEventListener('auth-unauthorized', handleUnauthorized);
-    return () => {
-      window.removeEventListener('auth-unauthorized', handleUnauthorized);
-    };
+    if (sessionReady && splashReady) {
+      setTimeout(() => setShowInitSplash(false), 250);
+    }
+  }, [sessionReady, splashReady]);
+
+  // Global unauthorized listener
+  useEffect(() => {
+    const handler = () => setUser(null);
+    window.addEventListener('auth-unauthorized', handler);
+    return () => window.removeEventListener('auth-unauthorized', handler);
   }, []);
 
   const handleLoginSuccess = (loggedInUser) => {
-    setUser(loggedInUser);
+    setPendingUser(loggedInUser);
+    setLoginSplash(true);
+  };
+
+  const handleSplashDone = () => {
+    setUser(pendingUser);
+    // Small delay lets the exit CSS animation finish before unmounting
+    setTimeout(() => {
+      setLoginSplash(false);
+      setPendingUser(null);
+    }, 250);
   };
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/auth/logout', { 
+      await fetch('http://localhost:3001/api/auth/logout', {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
       });
     } catch (err) {
       console.error('Logout error:', err);
@@ -61,39 +83,48 @@ function App() {
     }
   };
 
-  if (loading) {
+  // Initial app-load splash — plays full animation, waits for session fetch
+  if (showInitSplash) {
     return (
-      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '18px', fontFamily: 'sans-serif' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '28px', fontWeight: 'bold' }}>Evaquate</div>
-          <div style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Securing your session...</div>
-        </div>
-      </div>
+      <SplashScreen
+        message="Securing your session"
+        autoExit={SPLASH_DURATION}
+        onDone={() => setSplashReady(true)}
+      />
     );
   }
 
+  // Post-login transition — full cinematic splash, same as initial load
+  if (loginSplash) {
+    const roleMessages = {
+      super_admin: 'Launching Super Admin Hub',
+      admin:       'Preparing Admin Workspace',
+      teacher:     'Loading Teacher Dashboard',
+      student:     'Entering Drill Matrix',
+    };
+    const msg = roleMessages[pendingUser?.role] || 'Preparing your workspace';
+    return (
+      <SplashScreen
+        key={`login-${pendingUser?.role}-${Date.now()}`}
+        message={msg}
+        autoExit={SPLASH_DURATION}
+        onDone={handleSplashDone}
+      />
+    );
+  }
 
   return (
     <ToastProvider>
-      <div className="bg-ambient"></div>
-
+      {user && <div className="bg-ambient" />}
       <main style={{ minHeight: '100vh' }}>
         {!user ? (
           <Auth onLoginSuccess={handleLoginSuccess} />
         ) : (
           <>
-            {user.role === 'super_admin' && (
-              <SuperAdminDashboard user={user} onLogout={handleLogout} />
-            )}
-            {user.role === 'admin' && (
-              <AdminDashboard user={user} onLogout={handleLogout} />
-            )}
-            {user.role === 'teacher' && (
-              <TeacherDashboard user={user} onLogout={handleLogout} />
-            )}
-            {user.role === 'student' && (
-              <StudentDashboard user={user} onLogout={handleLogout} />
-            )}
+            {user.role === 'super_admin' && <SuperAdminDashboard user={user} onLogout={handleLogout} />}
+            {user.role === 'admin'       && <AdminDashboard      user={user} onLogout={handleLogout} />}
+            {user.role === 'teacher'     && <TeacherDashboard    user={user} onLogout={handleLogout} />}
+            {user.role === 'student'     && <StudentDashboard    user={user} onLogout={handleLogout} />}
           </>
         )}
       </main>

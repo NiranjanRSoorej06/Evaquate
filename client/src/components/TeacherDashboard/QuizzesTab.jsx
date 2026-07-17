@@ -2,6 +2,7 @@ import { BookOpen, ChevronLeft } from 'lucide-react';
 import { answerLabel } from './constants';
 import QuizList from './QuizList';
 import QuizDetail from './QuizDetail';
+import SplashScreen from '../SplashScreen';
 
 export default function QuizzesTab({
   selectedQuizDetail, setSelectedQuizDetail, quizzesLoading, assignedQuizzes,
@@ -18,7 +19,7 @@ export default function QuizzesTab({
             View or delete uploaded quizzes. You can upload multiple quizzes per disaster from Add Quiz.
           </p>
           {quizzesLoading ? (
-            <p style={{ color: '#64748b' }}>Loading quizzes...</p>
+            <SplashScreen mini message="Loading quizzes" />
           ) : assignedQuizzes.length > 0 ? (
             <QuizList
               assignedQuizzes={assignedQuizzes}

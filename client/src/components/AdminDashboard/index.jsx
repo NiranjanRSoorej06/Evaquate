@@ -16,10 +16,6 @@ const TAB_TITLES = {
 export default function AdminDashboard({ user, onLogout }) {
   const d = useAdminDashboard(user);
 
-  if (d.loading || !d.data) {
-    return <div className="loading-state">Preparing dashboard workspace...</div>;
-  }
-
   const handleEditTeacher = (teacher) => {
     d.handleEditTeacherClick(teacher);
     d.setActiveTab('onboarding');

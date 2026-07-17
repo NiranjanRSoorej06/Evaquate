@@ -4,7 +4,7 @@ import { useToast } from '../../../components/Toast';
 export function useAdminDashboard(user) {
   const addToast = useToast();
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
