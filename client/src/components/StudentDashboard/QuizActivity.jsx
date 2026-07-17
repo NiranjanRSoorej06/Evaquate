@@ -2,6 +2,7 @@ import { getDisasterMeta } from './constants';
 import QuizBrowse from './QuizBrowse';
 import QuizTaking from './QuizTaking';
 import QuizFinished from './QuizFinished';
+import SplashScreen from '../SplashScreen';
 
 export default function QuizActivity({
   selectedDisaster, quizLoading, quizPhase, setQuizPhase, availableQuizzes,
@@ -10,7 +11,7 @@ export default function QuizActivity({
   fetchAvailableQuizzes
 }) {
   if (quizLoading && quizPhase === 'browse') {
-    return <p style={{ textAlign: 'center', color: '#64748b' }}>Loading available quizzes...</p>
+    return <SplashScreen mini message="Loading available quizzes" />;
   }
   if (quizPhase === 'browse') {
     return (
@@ -22,7 +23,7 @@ export default function QuizActivity({
     );
   }
   if (quizLoading) {
-    return <p style={{ textAlign: 'center', color: '#64748b' }}>Loading quiz questions...</p>
+    return <SplashScreen mini message="Loading quiz questions" />;
   }
   if (quizPhase === 'finished' || quizFinished) {
     return (

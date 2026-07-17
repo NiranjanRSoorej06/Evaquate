@@ -5,7 +5,7 @@ import { useToast } from '../../Toast';
 export function useTeacherDashboard(user) {
   const addToast = useToast();
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
