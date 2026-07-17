@@ -73,7 +73,6 @@ export default function StudentDashboard({ user, onLogout }) {
 
   const redirectToGameDrill = () => {
     if (!selectedDisaster) return;
-    const baseUrl = import.meta.env.VITE_GAME_URL || 'http://localhost:3000';
     const gameDisaster = GAME_DISASTER_MAP[selectedDisaster] || 'fire';
     const params = new URLSearchParams({
       disaster: gameDisaster,
@@ -81,7 +80,7 @@ export default function StudentDashboard({ user, onLogout }) {
       studentId: user?.id || '',
       school: user?.school_id || '',
     });
-    window.open(`${baseUrl}?${params.toString()}`, '_blank', 'noopener,noreferrer');
+    window.open(`/game?${params.toString()}`, '_blank', 'noopener,noreferrer');
   };
 
   const fetchAvailableQuizzes = useCallback(async (disasterType) => {

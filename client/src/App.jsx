@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Auth from './components/Auth';
-import SuperAdminDashboard from './components/SuperAdminDashboard';
-import AdminDashboard from './components/AdminDashboard';
-import TeacherDashboard from './components/TeacherDashboard';
-import StudentDashboard from './components/StudentDashboard';
+import DashboardWrapper from './pages/Dashboard';
+import GamePage from './pages/Game';
 import { ToastProvider } from './components/Toast';
 import SplashScreen from './components/SplashScreen';
 
@@ -115,19 +114,33 @@ function App() {
 
   return (
     <ToastProvider>
-      {user && <div className="bg-ambient" />}
-      <main style={{ minHeight: '100vh' }}>
-        {!user ? (
-          <Auth onLoginSuccess={handleLoginSuccess} />
-        ) : (
+      <Routes>
+        <Route path="/game" element={<GamePage />} />
+        <Route path="*" element={
           <>
-            {user.role === 'super_admin' && <SuperAdminDashboard user={user} onLogout={handleLogout} />}
-            {user.role === 'admin'       && <AdminDashboard      user={user} onLogout={handleLogout} />}
-            {user.role === 'teacher'     && <TeacherDashboard    user={user} onLogout={handleLogout} />}
-            {user.role === 'student'     && <StudentDashboard    user={user} onLogout={handleLogout} />}
+            {user && <div className="bg-ambient" />}
+            <main style={{ minHeight: '100vh' }}>
+              <Routes>
+                <Route path="/" element={
+                  !user ? (
+                    <Auth onLoginSuccess={handleLoginSuccess} />
+                  ) : (
+                    <Navigate to="/dashboard" replace />
+                  )
+                } />
+                <Route path="/dashboard" element={
+                  user ? (
+                    <DashboardWrapper user={user} onLogout={handleLogout} />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )
+                } />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
           </>
-        )}
-      </main>
+        } />
+      </Routes>
     </ToastProvider>
   );
 }

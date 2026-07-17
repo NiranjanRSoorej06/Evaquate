@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Room, SchoolLayout, DisasterType, Hazard, Player, NPC, ActionFeedback, DrillResult } from '../types';
+import { Room, SchoolLayout, DisasterType, Hazard, Player, NPC, ActionFeedback, DrillResult } from '../../types';
 import ThreeDCanvas from './ThreeDCanvas';
 import { Play, Heart, Shield, Award, Clock, ArrowRight, UserCheck, AlertOctagon, HelpCircle, CheckCircle, Crosshair, Users, ShieldAlert } from 'lucide-react';
 

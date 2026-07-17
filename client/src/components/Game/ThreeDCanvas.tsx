@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Room, Hazard, Player, NPC } from '../types';
+import { Room, Hazard, Player, NPC } from '../../types';
 import { RotateCw, Compass, ZoomIn, ZoomOut, Move, AlertTriangle } from 'lucide-react';
 
 interface ThreeDCanvasProps {

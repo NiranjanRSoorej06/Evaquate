@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Room, SchoolLayout, DisasterType } from '../types';
+import { Room, SchoolLayout, DisasterType } from '../../types';
 import { Upload, Trash2, Check, RefreshCw, Layers, Edit, Save, Plus, ArrowRight, Download, BarChart2, Flame, Map } from 'lucide-react';
 
 interface DashboardProps {

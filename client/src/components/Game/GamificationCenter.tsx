@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Achievement, LeaderboardEntry } from '../types';
+import { Achievement, LeaderboardEntry } from '../../types';
 import { Award, Shield, Zap, Flame, Users, Trophy, ChevronRight, Check } from 'lucide-react';
 
 interface GamificationCenterProps {

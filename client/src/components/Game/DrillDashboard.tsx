@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { DisasterType, SchoolLayout, Objective, ActionLog, EvaluationData, DrillResult } from '../types';
+import { DisasterType, SchoolLayout, Objective, ActionLog, EvaluationData, DrillResult } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Flame,

@@ -32,3 +32,11 @@ def submit_score():
 @require_student_of_school
 def get_school_map(schoolId):
     return student_controller.get_school_map(schoolId)
+
+
+@student_bp.route('/api/evaluate-drill', methods=['POST'])
+@auth
+@require_student
+def evaluate_drill():
+    return student_controller.evaluate_drill()
+

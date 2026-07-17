@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Character, Hazard, SchoolLayout, Room, Door, Furniture, DisasterType, Objective, ActionLog } from '../types';
+import { Character, Hazard, SchoolLayout, Room, Door, Furniture, DisasterType, Objective, ActionLog } from '../../types';
 import { Shield, Eye, Flame, Droplet, Skull, AlertOctagon, HelpCircle, Wind, Navigation, ChevronDown, ChevronUp, Map, X } from 'lucide-react';
 
 interface SimulatorCanvasProps {
@@ -1319,9 +1319,9 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
   const latestLog = actionLogs && actionLogs.length > 0 ? actionLogs[actionLogs.length - 1] : null;
 
   return (
-    <div className="flex flex-col h-full bg-white border-4 border-amber-100 rounded-3xl overflow-hidden shadow-lg relative">
+    <div className="flex flex-col h-full min-h-0 bg-white border-4 border-amber-100 rounded-3xl overflow-hidden shadow-lg relative">
       {/* Simulation Header HUD */}
-      <div className="flex items-center justify-between px-5 py-3.5 bg-amber-50/80 border-b-2 border-amber-100 text-xs text-slate-800 relative z-30">
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-amber-50/80 border-b-2 border-amber-100 text-xs text-slate-800 relative z-30">
         <div className="flex items-center gap-3">
           <span className="flex h-3 w-3 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
@@ -1333,7 +1333,7 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 font-sans">
+        <div className="flex items-center gap-2 font-sans shrink-0">
           <div className="text-right hidden md:block mr-2">
             <span className="text-[10px] text-slate-500 block font-black uppercase tracking-wider">CURRENT POSITION</span>
             <span className="font-black text-slate-800 text-xs">FLOOR {character.floor} / {layout.floorsCount}</span>
@@ -1436,7 +1436,7 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
       )}
 
       {/* Main Canvas Container */}
-      <div ref={containerRef} className="flex-1 relative bg-slate-900 min-h-[360px]">
+      <div ref={containerRef} className="flex-1 min-h-[360px] relative bg-slate-900">
         <canvas
           ref={canvasRef}
           onClick={handleCanvasClick}
@@ -1483,7 +1483,7 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
       </div>
 
       {/* Realtime Player Vitality Stats HUD */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-6 py-4 bg-slate-50 border-t-2 border-slate-100 font-sans">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 px-4 py-3 bg-slate-50 border-t-2 border-slate-100 font-sans shrink-0">
         {/* HEALTH BAR */}
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between items-center text-xs font-black">
@@ -1535,12 +1535,12 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
           onClick={() => setShowFullMap(false)}
         >
           <div 
-            className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 shadow-2xl max-w-4xl w-full relative flex flex-col max-h-[90vh]"
+            className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-4 sm:p-6 shadow-2xl max-w-4xl w-full relative flex flex-col gap-3 max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <div>
+            <div className="flex items-start justify-between gap-4 px-1 pb-3 border-b border-slate-800">
+              <div className="min-w-0">
                 <h3 className="text-sm font-black text-white uppercase tracking-wider font-display flex items-center gap-1.5">
                   🏫 {layout.schoolName} - BLUEPRINT
                 </h3>
@@ -1550,7 +1550,7 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
               </div>
               <button 
                 onClick={() => setShowFullMap(false)}
-                className="text-slate-400 hover:text-white transition cursor-pointer p-1.5 bg-slate-800 rounded-xl hover:bg-slate-700 flex items-center justify-center"
+                className="text-slate-400 hover:text-white transition cursor-pointer p-2 bg-slate-800 rounded-xl hover:bg-slate-700 flex items-center justify-center shrink-0"
                 title="Close Blueprint"
               >
                 <X className="w-4 h-4" />
@@ -1559,7 +1559,7 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
 
             {/* Floor Switcher */}
             {layout.floorsCount > 1 && (
-              <div className="flex justify-center gap-2 mb-4 bg-slate-950/50 p-1 rounded-xl border border-slate-800/80">
+              <div className="flex justify-center gap-2 bg-slate-950/50 p-2 rounded-xl border border-slate-800/80">
                 {Array.from({ length: layout.floorsCount }).map((_, i) => {
                   const fNum = i + 1;
                   return (
@@ -1580,7 +1580,7 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
             )}
 
             {/* SVG Map Container */}
-            <div className="flex-1 overflow-auto bg-slate-950 border border-slate-800 rounded-2xl relative p-2 flex items-center justify-center min-h-[300px]">
+            <div className="flex-1 overflow-auto bg-slate-950 border border-slate-800 rounded-2xl relative p-3 sm:p-4 flex items-center justify-center min-h-[300px]">
               <svg 
                 viewBox="0 0 100 105" 
                 className="w-full h-auto max-h-[50vh] transition-all"
@@ -1785,7 +1785,7 @@ export const SimulatorCanvas: React.FC<SimulatorCanvasProps> = ({
             </div>
 
             {/* Legend / Footer */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 font-medium">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3 rounded-2xl bg-slate-950/45 px-3 py-3 text-[10px] text-slate-400 font-medium">
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded bg-slate-800 border border-slate-600 block"></span>
                 <span>Standard Classroom</span>

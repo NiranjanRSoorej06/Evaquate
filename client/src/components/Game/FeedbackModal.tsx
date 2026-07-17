@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { DrillResult } from '../types';
+import { DrillResult } from '../../types';
 import { Award, Check, AlertTriangle, Shield, RefreshCw, X, Download, Star } from 'lucide-react';
 
 interface FeedbackModalProps {

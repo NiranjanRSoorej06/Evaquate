@@ -143,8 +143,8 @@ export interface EvaluationData {
 
 
 // Import component lazily to ensure canvas variables bind perfectly
-import { SimulatorCanvas } from './components/SimulatorCanvas';
-import { audioEngine } from './components/AudioEngine';
+import { SimulatorCanvas } from '../../components/Game/SimulatorCanvas';
+import { audioEngine } from '../../components/Game/AudioEngine';
 
 export default function App() {
   const [studentName, setStudentName] = useState<string>('Super Explorer');
@@ -625,7 +625,7 @@ export default function App() {
         }).catch(err => console.error('Failed to save score to backend:', err));
       }
 
-      const res = await fetch('/api/evaluate-drill', {
+      const res = await fetch('http://localhost:3001/api/evaluate-drill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ drillResult })
@@ -706,7 +706,7 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f0f9ff] via-[#ffffff] to-[#fffbeb] text-slate-800 flex flex-col antialiased">
+    <div className="h-screen bg-gradient-to-br from-[#f0f9ff] via-[#ffffff] to-[#fffbeb] text-slate-800 flex flex-col antialiased overflow-hidden">
       
       {/* Top Application Bar - Super cheerful & clean! */}
       <header className="px-6 py-4 bg-white/90 backdrop-blur-md border-b-4 border-amber-100 flex items-center justify-between shadow-md relative overflow-hidden shrink-0">
@@ -750,18 +750,30 @@ export default function App() {
       </header>
 
       {/* Main Container - Full width gameplay vs beautiful landing */}
-      <main className={`flex-1 flex flex-col p-4 md:p-6 w-full items-stretch mx-auto transition-all duration-300 ${drillActive ? 'max-w-none px-4 md:px-6' : 'max-w-7xl'}`}>
-        <AnimatePresence mode="wait">
+      <main className="flex-1 w-full min-h-0 overflow-y-auto overflow-x-hidden flex flex-col">
+        <div 
+          style={{
+            maxWidth: drillActive ? 'none' : '1440px',
+            width: '100%',
+            margin: drillActive ? '0 auto' : 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            boxSizing: 'border-box'
+          }}
+          className="transition-all duration-300 p-3 md:p-4 flex-1 min-h-0"
+        >
+          <AnimatePresence mode="wait">
           {!drillActive ? (
             <motion.div
               key="setup-screen"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex flex-col gap-6 w-full"
+              className="flex flex-col gap-4 w-full"
             >
               {/* Cheerful Intro Card */}
-              <div className="bg-gradient-to-r from-sky-400 to-sky-500 p-6 md:p-8 rounded-3xl text-white shadow-lg relative overflow-hidden">
+              <div className="bg-gradient-to-r from-sky-400 to-sky-500 p-4 md:p-5 rounded-3xl text-white shadow-lg relative overflow-hidden">
                 <div className="absolute right-6 bottom-0 text-8xl opacity-15 pointer-events-none select-none">🦸</div>
                 <h2 className="text-2xl md:text-3xl font-black font-display tracking-tight">
                   Welcome to Safety Hero HQ, {studentName}! 🎒✨
@@ -773,10 +785,10 @@ export default function App() {
               </div>
 
               {/* Grid: 1. Name & Map on the top, 2. Missions on the bottom */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
                 {/* HERO NAME INPUT */}
-                <div className="bg-white border-4 border-amber-100 p-5 rounded-3xl shadow-md flex flex-col justify-center">
+                <div className="bg-white border-4 border-amber-100 p-3 rounded-3xl shadow-md flex flex-col justify-center">
                   <label className="text-xs font-black text-amber-800 uppercase tracking-wider block mb-2 font-display">
                     🦸 1. ENTER YOUR HERO NAME
                   </label>
@@ -793,13 +805,13 @@ export default function App() {
                 </div>
 
                 {/* SCHOOL CAMPUS BLUEPRINT STATUS */}
-                <div className="bg-white border-4 border-amber-100 p-5 rounded-3xl shadow-md">
+                <div className="bg-white border-4 border-amber-100 p-3 rounded-3xl shadow-md">
                   <label className="text-xs font-black text-amber-800 uppercase tracking-wider block mb-2.5 font-display">
                     🏫 2. YOUR SCHOOL CAMPUS MAP
                   </label>
 
                   {blueprintLoading ? (
-                    <div className="flex flex-col items-center justify-center gap-2 min-h-[90px] border-2 border-amber-200 rounded-2xl bg-amber-50/40 p-4">
+                    <div className="flex flex-col items-center justify-center gap-2 min-h-[70px] border-2 border-amber-200 rounded-2xl bg-amber-50/40 p-4">
                       <RefreshCw className="w-6 h-6 text-amber-500 animate-spin" />
                       <span className="text-[11px] text-amber-950 font-extrabold block">
                         Loading school blueprint...
@@ -809,7 +821,7 @@ export default function App() {
                       </span>
                     </div>
                   ) : currentLayout.rooms.length > 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-2 min-h-[90px] border-2 border-emerald-200 rounded-2xl bg-emerald-50/40 p-4">
+                    <div className="flex flex-col items-center justify-center gap-2 min-h-[70px] border-2 border-emerald-200 rounded-2xl bg-emerald-50/40 p-4">
                       <MapPin className="w-6 h-6 text-emerald-500" />
                       <span className="text-[11px] text-emerald-950 font-extrabold block">
                         {currentLayout.schoolName}
@@ -819,7 +831,7 @@ export default function App() {
                       </span>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center gap-2 min-h-[90px] border-2 border-rose-200 rounded-2xl bg-rose-50/40 p-4">
+                    <div className="flex flex-col items-center justify-center gap-2 min-h-[70px] border-2 border-rose-200 rounded-2xl bg-rose-50/40 p-4">
                       <AlertTriangle className="w-6 h-6 text-rose-500" />
                       <span className="text-[11px] text-rose-950 font-extrabold block">
                         No school blueprint loaded
@@ -833,7 +845,7 @@ export default function App() {
               </div>
 
               {/* Selected Map Indicator */}
-              <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl px-4 py-2.5 text-emerald-800 flex items-center justify-between text-xs font-bold shadow-sm">
+              <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl px-4 py-2 text-emerald-800 flex items-center justify-between text-xs font-bold shadow-sm">
                 <span className="flex items-center gap-1.5">
                   <School className="w-4 h-4 text-emerald-600" />
                   Active Map: {currentLayout.schoolName} ({currentLayout.floorsCount} Floors)
@@ -842,7 +854,7 @@ export default function App() {
               </div>
 
               {/* DRILL MISSION READY CARD */}
-              <div className="bg-white border-4 border-rose-50 p-6 rounded-3xl shadow-md">
+              <div className="bg-white border-4 border-rose-50 p-3 rounded-3xl shadow-md">
                 <h3 className="text-xs font-black text-rose-800 uppercase tracking-widest mb-4 font-display flex items-center gap-1.5">
                   🚀 3. YOUR EMERGENCY SAFETY QUEST!
                 </h3>
@@ -897,10 +909,10 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col gap-4 flex-1 w-full"
+              className="flex flex-col gap-3 flex-1 min-h-0 w-full"
             >
               {/* Full Width Game View Area */}
-              <div className="flex-1 h-[640px] lg:h-[760px] flex flex-col w-full">
+              <div className="flex-1 min-h-0 flex flex-col w-full">
                 <SimulatorCanvas
                   layout={currentLayout}
                   onLayoutChange={setCurrentLayout}
@@ -919,8 +931,8 @@ export default function App() {
               </div>
 
               {/* Bottom live stats tray - Super simple, clean & spacious */}
-              <div className="bg-white border-4 border-amber-100 p-4 rounded-3xl shadow-md flex flex-wrap items-center justify-between gap-4 shrink-0">
-                <div className="flex items-center gap-6">
+              <div className="bg-white border-4 border-amber-100 px-4 py-3 rounded-3xl shadow-md flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                   {/* Score */}
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">⭐</span>
@@ -960,14 +972,15 @@ export default function App() {
                 {/* Reset button */}
                 <button
                   onClick={handleResetDrill}
-                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 text-slate-700 hover:text-slate-800 rounded-2xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-200 text-slate-700 hover:text-slate-800 rounded-2xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <RotateCcw className="w-4 h-4 text-slate-500" /> STOP & RESET MISSION
                 </button>
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
+          </AnimatePresence>
+        </div>
       </main>
 
       {/* GEMINI AI DRILL EVALUATION MODAL */}
