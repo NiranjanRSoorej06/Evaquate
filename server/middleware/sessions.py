@@ -7,6 +7,8 @@ from flask import make_response
 
 from config import JWT_SECRET, IS_PRODUCTION, SESSION_EXPIRY_MS, SESSION_EXPIRY_SEC
 
+COOKIE_SAMESITE = 'None' if IS_PRODUCTION else 'Lax'
+
 # In-memory session store: sessionId -> { user: dict, expiresAt: float }
 sessions: dict = {}
 
@@ -34,7 +36,7 @@ def set_session_and_cookie(response, user_payload):
         'token', token,
         httponly=True,
         secure=IS_PRODUCTION,
-        samesite='Lax',
+        samesite=COOKIE_SAMESITE,
         max_age=SESSION_EXPIRY_SEC,
     )
     return response
@@ -46,6 +48,6 @@ def clear_auth_cookie(response):
         'token',
         httponly=True,
         secure=IS_PRODUCTION,
-        samesite='Lax',
+        samesite=COOKIE_SAMESITE,
     )
     return response

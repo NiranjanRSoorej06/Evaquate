@@ -9,7 +9,6 @@ def get_all_schools():
     """Get all schools with teacher/student counts."""
     try:
         result = school_model.get_all_with_counts()
-        print(f'Fetched {result["rowCount"]} schools from database')
         return result['rows'], None
     except Exception as e:
         print('Error fetching schools:', str(e))
@@ -26,7 +25,6 @@ def create_school(name, unique_code, password):
 
         new_school_id = generate_id('school')
         insert_result = school_model.create(new_school_id, name, unique_code, password)
-        print(f'School created successfully: {insert_result["rows"]}')
         return insert_result['rows'][0], None
     except Exception as e:
         print('Error creating school:', str(e))

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
+import { apiUrl, API_URL } from './api.js'
 
 // Global Fetch Interceptor for JWT HTTP-only credentials and 401 handling
 const originalFetch = window.fetch;
@@ -16,7 +17,10 @@ window.fetch = async (input, init = {}) => {
     url = input.url;
   }
 
-  const isBackendRequest = url.startsWith('http://localhost:3001') || url.startsWith('/api') || url.startsWith('api/');
+  const isBackendRequest = url.startsWith(API_URL) || url.startsWith('/api') || url.startsWith('api/');
+  const requestInput = (url.startsWith('/api') || url.startsWith('api/'))
+    ? apiUrl(url)
+    : input;
   
   if (isBackendRequest) {
     init.credentials = 'include';
@@ -33,7 +37,7 @@ window.fetch = async (input, init = {}) => {
 
   let response;
   try {
-    response = await originalFetch(input, fetchOptions);
+    response = await originalFetch(requestInput, fetchOptions);
   } catch (err) {
     if (isBackendRequest && !skipGlobalToast) {
       window.dispatchEvent(new CustomEvent('show-toast', {

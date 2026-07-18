@@ -2,6 +2,7 @@ import os
 import json
 import secrets
 import uuid
+from werkzeug.utils import secure_filename
 
 from config import UPLOAD_DIR
 from models import school_model
@@ -25,7 +26,10 @@ def upload_image_to_storage(school_id, file_bytes, filename):
             except Exception as e:
                 print(f"Failed to remove old image: {e}")
 
-        ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'png'
+        filename = secure_filename(filename or '')
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'png'
+        if ext not in {'png', 'jpg', 'jpeg', 'webp'}:
+            return None
         new_path = f"{school_id}/{uuid.uuid4()}.{ext}"
         supabase.storage.from_(BUCKET_NAME).upload(new_path, file_bytes)
         # Persist path immediately to DB (blueprint_json unchanged)
@@ -77,7 +81,10 @@ def upload_blueprint(school_id, uploaded_file, blueprint_json=None):
                         print(f"Failed to remove old image: {e}")
 
                 # upload new image
-                ext = uploaded_file.filename.split('.')[-1] if '.' in uploaded_file.filename else 'png'
+                filename = secure_filename(uploaded_file.filename or '')
+                ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'png'
+                if ext not in {'png', 'jpg', 'jpeg', 'webp'}:
+                    return None, {'success': False, 'message': 'Unsupported image type.'}
                 image_uuid = str(uuid.uuid4())
                 new_path = f"{school_id}/{image_uuid}.{ext}"
                 

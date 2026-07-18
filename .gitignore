@@ -1,0 +1,16 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Runtime and build artifacts
+client/node_modules/
+client/dist/
+server/uploads/
+server/__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Local tooling
+.DS_Store
+*.log

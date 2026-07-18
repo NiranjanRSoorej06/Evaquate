@@ -2,13 +2,25 @@ import os
 from flask import Flask
 from flask_cors import CORS
 
-from config import PORT, UPLOAD_DIR
+from config import PORT, UPLOAD_DIR, JWT_SECRET
 from routes import auth_bp, superadmin_bp, admin_bp, teacher_bp, student_bp
 
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, origins=['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'], supports_credentials=True)
+    app.config.update(
+        SECRET_KEY=JWT_SECRET,
+        MAX_CONTENT_LENGTH=10 * 1024 * 1024,
+    )
+    frontend_url = os.environ.get('FRONTEND_URL', '').rstrip('/')
+    allowed_origins = [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://localhost:3000',
+    ]
+    if frontend_url:
+        allowed_origins.append(frontend_url)
+    CORS(app, resources={r'/api/*': {'origins': allowed_origins}}, supports_credentials=True)
 
     # Ensure uploads directory exists
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -26,5 +38,4 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    print(f'Disaster preparedness server is running on http://localhost:{PORT}')
     app.run(host='0.0.0.0', port=PORT, debug=False)

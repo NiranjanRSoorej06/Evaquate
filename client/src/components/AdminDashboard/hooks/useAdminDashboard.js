@@ -34,7 +34,7 @@ export function useAdminDashboard(user) {
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/${user.id}/dashboard`, { credentials: 'include' });
+      const response = await fetch(`/api/admin/${user.id}/dashboard`, { credentials: 'include' });
       const resData = await response.json();
       setData(resData);
     } catch (err) {
@@ -53,7 +53,7 @@ export function useAdminDashboard(user) {
     try {
       let response, resData;
       if (isEditingTeacher) {
-        response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${isEditingTeacher}`, {
+        response = await fetch(`/api/admin/${user?.id}/teachers/${isEditingTeacher}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -62,7 +62,7 @@ export function useAdminDashboard(user) {
         });
         resData = await response.json();
       } else {
-        response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers`, {
+        response = await fetch(`/api/admin/${user?.id}/teachers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -104,7 +104,7 @@ export function useAdminDashboard(user) {
   const handleDeleteTeacher = async (teacherId) => {
     if (!window.confirm('Are you sure you want to delete this teacher?')) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/teachers/${teacherId}`, {
+      const response = await fetch(`/api/admin/${user?.id}/teachers/${teacherId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -269,7 +269,7 @@ export function useAdminDashboard(user) {
         const completeLayout = processSchoolLayoutJSON(parsed);
 
         // Send processed layout to backend
-        const response = await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+        const response = await fetch(`/api/admin/${user?.id}/blueprint`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -328,7 +328,7 @@ export function useAdminDashboard(user) {
     updatedBlueprint.elements.assembly_zone = assembly_zone;
 
     try {
-      await fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+      await fetch(`/api/admin/${user?.id}/blueprint`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -343,7 +343,7 @@ export function useAdminDashboard(user) {
   const handleWipeBlueprint = () => {
     if (!window.confirm('Purge spatial records?')) return;
     setData((prev) => ({ ...prev, blueprint_json: null }));
-    fetch(`http://localhost:3001/api/admin/${user?.id}/blueprint`, {
+    fetch(`/api/admin/${user?.id}/blueprint`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

@@ -38,7 +38,7 @@ export function useTeacherDashboard(user) {
   const fetchTeacherData = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/students`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/teacher/${user.id}/students`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       if (data?.students) setStudents(data.students);
     } catch (err) {
@@ -54,7 +54,7 @@ export function useTeacherDashboard(user) {
     if (!user?.id) return;
     setQuizzesLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/teacher/${user.id}/quizzes`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       if (data?.quizzes) {
         setAssignedQuizzes(data.quizzes);
@@ -85,7 +85,7 @@ export function useTeacherDashboard(user) {
     setQuizDetailLoading(true);
     setSelectedQuizDetail(null);
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes/${quizId}`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/teacher/${user.id}/quizzes/${quizId}`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       if (data?.questions) setSelectedQuizDetail(data);
       else {
@@ -103,7 +103,7 @@ export function useTeacherDashboard(user) {
   const handleDeleteQuiz = async (quizId, label) => {
     if (!window.confirm(`Delete ${label || 'this quiz'}? Students will no longer see it.`)) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.id}/quizzes/${quizId}`, {
+      const response = await fetch(`/api/teacher/${user.id}/quizzes/${quizId}`, {
         method: 'DELETE',
         credentials: 'include',
         skipGlobalToast: true
@@ -134,7 +134,7 @@ export function useTeacherDashboard(user) {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/students`, {
+      const response = await fetch(`/api/teacher/${user?.id}/students`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -162,7 +162,7 @@ export function useTeacherDashboard(user) {
   const handleDeleteStudent = async (studentId) => {
     if (!window.confirm('Remove this student from your class?')) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/students/${studentId}`, {
+      const response = await fetch(`/api/teacher/${user?.id}/students/${studentId}`, {
         method: 'DELETE',
         credentials: 'include',
         skipGlobalToast: true
@@ -214,7 +214,7 @@ export function useTeacherDashboard(user) {
       const formData = new FormData();
       formData.append('student_file', studentFile);
       formData.append('school_id', user.school_id);
-      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/students/import`, {
+      const response = await fetch(`/api/teacher/${user?.id}/students/import`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -260,7 +260,7 @@ export function useTeacherDashboard(user) {
       const formData = new FormData();
       formData.append('quiz_file', quizFile);
       formData.append('disaster_type', selectedDisaster);
-      const response = await fetch(`http://localhost:3001/api/teacher/${user?.id}/quizzes/upload`, {
+      const response = await fetch(`/api/teacher/${user?.id}/quizzes/upload`, {
         method: 'POST',
         credentials: 'include',
         body: formData,

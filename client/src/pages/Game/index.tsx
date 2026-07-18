@@ -236,7 +236,7 @@ export default function App() {
     const schoolId = params.get('school');
     if (schoolId) {
       setBlueprintLoading(true);
-      fetch(`http://localhost:3001/api/public/school/${schoolId}/blueprint`)
+      fetch(`/api/public/school/${schoolId}/blueprint`)
         .then(res => res.json())
         .then(data => {
           // Handle case where backend returns a JSON string instead of object
@@ -611,7 +611,7 @@ export default function App() {
       };
 
       if (studentId) {
-        fetch('http://localhost:3001/api/student/score', {
+        fetch('/api/student/score', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -625,7 +625,7 @@ export default function App() {
         }).catch(err => console.error('Failed to save score to backend:', err));
       }
 
-      const res = await fetch('http://localhost:3001/api/evaluate-drill', {
+      const res = await fetch('/api/evaluate-drill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ drillResult })

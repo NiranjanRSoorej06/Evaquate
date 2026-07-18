@@ -1,4 +1,5 @@
 from flask import request, jsonify
+from werkzeug.utils import secure_filename
 
 from services import teacher_service, quiz_service
 from utils.helpers import get_json_body
@@ -44,6 +45,10 @@ def import_students(teacherId):
 
     if not uploaded_file or not school_id:
         return jsonify({'success': False, 'message': 'A student file and school_id are required.'}), 400
+    filename = secure_filename(uploaded_file.filename or '')
+    if not filename or filename.rsplit('.', 1)[-1].lower() not in {'csv', 'xls', 'xlsx'}:
+        return jsonify({'success': False, 'message': 'Upload a CSV, XLS or XLSX file.'}), 400
+    uploaded_file.filename = filename
 
     try:
         students = teacher_service.parse_student_upload(uploaded_file)
@@ -65,6 +70,10 @@ def upload_quiz(teacherId):
 
     if not uploaded_file or not disaster_type:
         return jsonify({'success': False, 'message': 'A CSV file and disaster type are required.'}), 400
+    filename = secure_filename(uploaded_file.filename or '')
+    if not filename or not filename.lower().endswith('.csv'):
+        return jsonify({'success': False, 'message': 'Upload a CSV file.'}), 400
+    uploaded_file.filename = filename
 
     result, error = teacher_service.upload_quiz(uploaded_file, disaster_type, teacherId)
     if error:

@@ -23,7 +23,7 @@ function App() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/auth/session', {
+        const response = await fetch('/api/auth/session', {
           credentials: 'include',
           skipGlobalToast: true,
         });
@@ -71,7 +71,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/auth/logout', {
+      await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });

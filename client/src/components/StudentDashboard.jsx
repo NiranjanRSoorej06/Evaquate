@@ -47,7 +47,7 @@ export default function StudentDashboard({ user, onLogout }) {
   const fetchScoreHistory = useCallback(async () => {
     if (!user?.teacher_id || !user?.id) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/teacher/${user.teacher_id}/students`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/teacher/${user.teacher_id}/students`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       const me = data.students?.find(s => s.id === user.id);
       if (me) setScoreHistory(me.scores || []);
@@ -87,7 +87,7 @@ export default function StudentDashboard({ user, onLogout }) {
     setQuizLoading(true);
     try {
       const query = disasterType ? `?disaster=${encodeURIComponent(disasterType)}` : '';
-      const response = await fetch(`http://localhost:3001/api/student/quizzes${query}`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/student/quizzes${query}`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       setAvailableQuizzes(data.quizzes || []);
     } catch (err) {
@@ -122,7 +122,7 @@ export default function StudentDashboard({ user, onLogout }) {
     setQuizCorrectCount(0);
     setFinalPercentage(0);
     try {
-      const response = await fetch(`http://localhost:3001/api/quizzes/${quizId}`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/quizzes/${quizId}`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       if (data?.questions?.length) {
         setQuizQuestions(data.questions);
@@ -176,7 +176,7 @@ export default function StudentDashboard({ user, onLogout }) {
   const submitScore = async (activityType, score, durationSeconds) => {
     if (!user?.id || !selectedDisaster) return;
     try {
-      await fetch('http://localhost:3001/api/student/score', {
+      await fetch('/api/student/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

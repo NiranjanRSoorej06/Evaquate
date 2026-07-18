@@ -31,7 +31,7 @@ export function useSuperAdminDashboard() {
 
   const fetchSchools = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/superadmin/schools', { credentials: 'include' });
+      const response = await fetch('/api/superadmin/schools', { credentials: 'include' });
       const data = await response.json();
       setSchools(data || []);
     } catch (err) {
@@ -41,7 +41,7 @@ export function useSuperAdminDashboard() {
 
   const fetchTeachers = async (schoolId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/superadmin/schools/${schoolId}/teachers`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/superadmin/schools/${schoolId}/teachers`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       setTeachers(data || []);
     } catch (err) {
@@ -53,7 +53,7 @@ export function useSuperAdminDashboard() {
 
   const fetchStudents = async (schoolId, teacherId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/superadmin/schools/${schoolId}/teachers/${teacherId}/students`, { credentials: 'include', skipGlobalToast: true });
+      const response = await fetch(`/api/superadmin/schools/${schoolId}/teachers/${teacherId}/students`, { credentials: 'include', skipGlobalToast: true });
       const data = await response.json();
       setStudents(data || []);
     } catch (err) {
@@ -80,7 +80,7 @@ export function useSuperAdminDashboard() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/superadmin/schools', {
+      const response = await fetch('/api/superadmin/schools', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -122,7 +122,7 @@ export function useSuperAdminDashboard() {
   const handleDisableSchool = async (schoolId, currentDisabled) => {
     if (!window.confirm(`Are you sure you want to ${currentDisabled ? 'enable' : 'disable'} this school?`)) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/superadmin/schools/${schoolId}/disable`, {
+      const response = await fetch(`/api/superadmin/schools/${schoolId}/disable`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -153,9 +153,9 @@ export function useSuperAdminDashboard() {
     try {
       let url = '';
       if (resetTarget.type === 'teacher') {
-        url = `http://localhost:3001/api/superadmin/schools/${selectedSchool.id}/teachers/${resetTarget.id}/reset-password`;
+        url = `/api/superadmin/schools/${selectedSchool.id}/teachers/${resetTarget.id}/reset-password`;
       } else {
-        url = `http://localhost:3001/api/superadmin/schools/${selectedSchool.id}/teachers/${selectedTeacher.id}/students/${resetTarget.id}/reset-password`;
+        url = `/api/superadmin/schools/${selectedSchool.id}/teachers/${selectedTeacher.id}/students/${resetTarget.id}/reset-password`;
       }
       const response = await fetch(url, {
         method: 'PUT',

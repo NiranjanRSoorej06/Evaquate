@@ -2,6 +2,7 @@ import os
 import io
 import json
 from flask import request, jsonify
+from werkzeug.utils import secure_filename
 
 from config import GEMINI_API_KEY
 from services import school_services, blueprint_service
@@ -103,6 +104,9 @@ def image_to_json(schoolId):
     image_file = request.files.get('image')
     if not image_file:
         return jsonify({'success': False, 'message': 'No image file provided. Send a PNG/JPG as multipart field "image".'}), 400
+    image_file.filename = secure_filename(image_file.filename or '')
+    if not image_file.filename:
+        return jsonify({'success': False, 'message': 'Invalid image filename.'}), 400
 
     # Normalise mime type — Gemini accepts image/jpeg but not image/jpg
     mime_map = {'image/jpg': 'image/jpeg'}

@@ -6,9 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+INITIAL_SUPERADMIN_PASSWORD = os.getenv("INITIAL_SUPERADMIN_PASSWORD")
 
 if not DATABASE_URL:
     raise Exception("DATABASE_URL not found in .env")
+if not INITIAL_SUPERADMIN_PASSWORD:
+    raise Exception("INITIAL_SUPERADMIN_PASSWORD must be set before initializing the database")
 
 def init():
     print("Connecting to Neon PostgreSQL...")
@@ -144,17 +147,9 @@ def init():
                 name,
                 class_assigned
             )
-            VALUES (
-                'sa_1',
-                NULL,
-                'super_admin',
-                'superadmin',
-                'adminpassword',
-                'Super Admin',
-                NULL
-            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (username) DO NOTHING;
-        """)
+        """, ('sa_1', None, 'super_admin', 'superadmin', INITIAL_SUPERADMIN_PASSWORD, 'Super Admin', None))
 
         print("Super admin initialized.")
 

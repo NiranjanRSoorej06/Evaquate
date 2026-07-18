@@ -47,7 +47,7 @@ export default function ImageToJsonConverter({ user }) {
       formData.append('image', imageFile);
 
       const response = await fetch(
-        `http://localhost:3001/api/admin/${user?.id}/image-to-json`,
+        `/api/admin/${user?.id}/image-to-json`,
         {
           method: 'POST',
           credentials: 'include',
